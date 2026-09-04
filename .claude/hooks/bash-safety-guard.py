@@ -94,7 +94,6 @@ RULES = [
     # ── git staging of investigation data ─────────────────────────────────
     (
         [
-            r"\bgit\s+add\s+data/",
             r"\bgit\s+add\s+-f\b",   # force-add could override gitignore
         ],
         "BLOCKED — git staging of customer investigation data.\n"
@@ -105,6 +104,30 @@ RULES = [
 ]
 
 GIT_STAGING_RULE_INDEX = 3  # index of the git-staging rule in RULES
+
+# Shared knowledge files under data/ that ARE safe to commit — everything else
+# under data/ is a timestamped investigation folder containing customer PII.
+ALLOWED_DATA_PATHS = {
+    "data/known-resolutions.md",
+    "data/product-capability-reference.md",
+    "data/ISD-Triage-Skill-Executive-Brief.md",
+}
+
+if IS_GIT_CMD:
+    add_match = re.match(r"\s*git\s+add\s+(.*)$", cmd)
+    if add_match:
+        for tok in add_match.group(1).split():
+            if tok.startswith("data/") and tok not in ALLOWED_DATA_PATHS:
+                print(
+                    "BLOCKED — git staging of customer investigation data.\n"
+                    "Safety rule: data/<timestamp>/ folders contain customer PII, ticket\n"
+                    "context, and log excerpts — they must not be committed to git.\n"
+                    "Stage specific reference files instead, e.g.:\n"
+                    "  git add data/known-resolutions.md\n"
+                    "  git add data/product-capability-reference.md"
+                )
+                print(f"\nCommand that triggered this guard:\n  {cmd[:300]}")
+                sys.exit(2)
 
 for i, (patterns, message) in enumerate(RULES):
     # Skip MongoDB, Redis, and restart rules for git commands
