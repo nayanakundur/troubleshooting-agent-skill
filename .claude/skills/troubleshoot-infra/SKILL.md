@@ -158,6 +158,46 @@ docker exec platform ps aux 2>/dev/null \
 
 ---
 
+## Phase 3x: Prometheus Metrics (when `PROMETHEUS_URL` is available)
+
+**When to invoke** — any one of these conditions is true:
+- Phase 3 (CPU) shows sustained load > 2× CPU cores on any IAP node
+- Phase 4 (Memory) will show or already shows a node approaching OOM
+- Phase 1c (Crash Loop Detection) shows container restarts correlating with resource pressure
+- Engineer wants time-series analysis of an incident window rather than a current-state snapshot
+- `PROMETHEUS_URL` is set in `.env` and the engineer requests metrics-based analysis
+
+**Prerequisites:** `PROMETHEUS_URL` in `.env`. For authenticated Prometheus:
+- Basic auth → add `PROMETHEUS_BASIC_AUTH_USER` and `PROMETHEUS_BASIC_AUTH_PASS` to `.env`
+- Bearer token → add `PROMETHEUS_BEARER_TOKEN` to `.env`
+- Vault-managed credentials → source `vault-env.sh` first, then the skill picks up the env vars
+
+**Invoke — and pass the incident time window:**
+```
+/prometheus
+```
+
+Tell the skill the incident start and end time from `ticket_context.md` (e.g.,
+`"2026-09-10 14:30 UTC to 15:15 UTC"`) so it scopes PromQL range queries to the
+relevant period instead of defaulting to the last hour.
+
+The `/prometheus` skill covers:
+- Health and readiness check
+- Scrape target status (which targets are up/down)
+- Firing alerts (current and resolved within window)
+- Alerting and recording rule inventory
+- Instant and range PromQL queries (pass raw PromQL for ad-hoc analysis)
+- CPU utilization stat table per process group (using `quantile_over_time`)
+- Resident RSS memory stat table
+- IAP task completion rate (jobs/sec, estimated totals)
+- TSDB head block cardinality and WAL size
+
+**After Prometheus analysis:** cross-reference metric timestamps against log timestamps
+from `/troubleshoot-logs` to confirm causality. Pass the PromQL findings to
+`diagnostic_report.md` as evidence alongside the raw log excerpts.
+
+---
+
 ## Phase 4: Memory (RAM)
 
 ```bash

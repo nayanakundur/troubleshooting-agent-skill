@@ -168,6 +168,43 @@ Extract: summary, description, affectedVersions, fixVersions, components, status
 
 ### 2a — Resolution Entry (for ISD tickets)
 
+**Before generating the entry, resolve the ENG ticket key.** Do not leave this as a placeholder — run the three checks below in order and use the first key found:
+
+**Check 1 — Jira issue links on the ISD ticket:**
+```bash
+curl -s "${JIRA_URL}/rest/api/3/issue/${ISD_TICKET_KEY}?fields=issuelinks" \
+  -u "${JIRA_USER}:${JIRA_API_TOKEN}" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+for link in d.get('fields', {}).get('issuelinks', []):
+    for side in ('inwardIssue', 'outwardIssue'):
+        key = link.get(side, {}).get('key', '')
+        if key.startswith('ENG-'):
+            print(key)
+"
+```
+
+**Check 2 — Remote links (external Jira links):**
+```bash
+curl -s "${JIRA_URL}/rest/api/3/issue/${ISD_TICKET_KEY}/remotelink" \
+  -u "${JIRA_USER}:${JIRA_API_TOKEN}" | python3 -c "
+import sys, json
+for link in json.load(sys.stdin):
+    title = link.get('object', {}).get('title', '')
+    if 'ENG-' in title:
+        import re; m = re.search(r'ENG-\d+', title)
+        if m: print(m.group())
+"
+```
+
+**Check 3 — Investigation artifacts (`diagnostic_report.md`, `eng_ticket_draft.md`):**
+```bash
+grep -oE 'ENG-[0-9]+' data/*/*/${ISD_TICKET_KEY}/diagnostic_report.md \
+  data/*/*/${ISD_TICKET_KEY}/eng_ticket_draft.md 2>/dev/null | sort -u | head -1
+```
+
+Set `ENG_TICKET_KEY` to the first result found across all three checks, or `N/A` if none.
+
 Read `diagnostic_report.md` and `ticket_context.md` and generate a resolution entry in the standard format:
 
 ```markdown
@@ -178,7 +215,7 @@ Read `diagnostic_report.md` and `ticket_context.md` and generate a resolution en
 | Field | Value |
 |-------|-------|
 | **Ticket** | {TICKET_KEY} |
-| **ENG Bug** | {ENG-XXXX if applicable | N/A} |
+| **ENG Bug** | {ENG_TICKET_KEY — resolved above, never left as placeholder} |
 | **Component** | {component — e.g. "Platform core — Shutdown.js"} |
 | **Platform Version** | {IAP version} (confirmed) |
 | **Severity** | {S1-S4} — {brief impact description} |

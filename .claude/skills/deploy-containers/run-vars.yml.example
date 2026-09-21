@@ -1,0 +1,39 @@
+# /deploy-containers — per-engineer runtime configuration
+# Copy this file to run-vars.yml and fill in your values.
+# run-vars.yml is gitignored — never commit it.
+#
+# Usage: .claude/skills/deploy-containers/run-vars.yml is read at skill startup.
+# Most values here can be overridden by .env variables (see CLAUDE.md).
+
+# ── ECR Registry ──────────────────────────────────────────────────────────────
+ecr_registry: "497639811223.dkr.ecr.us-east-2.amazonaws.com"
+ecr_region: "us-east-2"
+
+# ── Dev Stack ─────────────────────────────────────────────────────────────────
+# Local path where itential-dev-stack is cloned.
+# Default: ~/itential-dev-stack (the skill will clone here if absent)
+devstack_dir: ""   # leave blank to use default ~/itential-dev-stack
+
+# ── Docker VM SSH (DEPLOY_TYPE=docker-vm) ─────────────────────────────────────
+# If blank, reads SSH_HOST_1 / SSH_USER_1 / SSH_KEY_PATH_1 from .env
+docker_vm_host: ""
+docker_vm_user: ""
+docker_vm_key_path: ""   # absolute path, e.g. /Users/<you>/.ssh/my-key.pem
+
+# ── Kubernetes ────────────────────────────────────────────────────────────────
+# Target namespace for Helm deployments
+k8s_namespace: "itential"
+
+# kubectl context to use (blank = current-context from KUBECONFIG)
+k8s_context: ""
+
+# Helm chart versions (blank = latest)
+# Pin these to lock a specific chart version for reproducible deploys
+iap_helm_chart_version: ""     # e.g. "1.2.0"
+iag5_helm_chart_version: ""
+iag4_helm_chart_version: ""
+
+# ── Platform Image Defaults ───────────────────────────────────────────────────
+# Override only if you always work with a specific IAP version.
+# The skill prompts for the version on each run if this is blank.
+default_iap_version: ""   # e.g. "6.5.2" or "6"

@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 .claude/hooks/bash-safety-guard.py"
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.claude/hooks/bash-safety-guard.py\""
           }
         ]
       },
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 .claude/hooks/file-write-guard.py"
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.claude/hooks/file-write-guard.py\""
           }
         ]
       },
@@ -24,7 +24,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 .claude/hooks/file-write-guard.py"
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.claude/hooks/file-write-guard.py\""
           }
         ]
       }
@@ -35,7 +35,16 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 .claude/hooks/check-builder-skills-staleness.py"
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.claude/hooks/check-builder-skills-staleness.py\""
+          }
+        ]
+      },
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.claude/hooks/check-platform-skills-staleness.py\""
           }
         ]
       }

@@ -209,6 +209,41 @@ db.jobs.createIndex({ start_time: -1 })
 db.sessions.createIndex({ expires: 1 }, { expireAfterSeconds: 0 })  // TTL for sessions
 ```
 
+### Step 1k — Platform Skill: MongoDB Full Life Report
+
+**When to invoke** — any one of these conditions is true:
+- Step 1c shows a member in non-PRIMARY / RECOVERING / STARTUP state, or secondary lag > 30s
+- Step 1b shows connection pool used > 80% or resident memory near system limit
+- Elections detected recently (check `rs.status().members[*].electionDate`)
+- Replica set members are UNKNOWN or quorum is at risk
+- Engineer explicitly requests a scored comprehensive assessment of the MongoDB cluster
+
+**Prerequisite:** `MONGO_URL` must be set in `.env`.
+
+**Invoke:**
+```
+/mongodb
+```
+
+The `/mongodb` skill authenticates using `MONGO_URL`, runs a full replica set life
+report, and outputs a scored **HEALTHY / DEGRADED / CRITICAL** summary covering:
+- Replica set topology, member states, and oplog window
+- WiredTiger cache hit ratio and eviction pressure
+- Write contention and active slow operations
+- Slow query profiler (if already enabled)
+- Database and collection sizes, index inventory
+- Transparent Huge Pages (THP) check
+- Recent log anomalies
+
+**Offline / air-gapped environments:** if mongosh cannot reach the database from the
+engineer's workstation but SSH access to the MongoDB nodes is available, the skill
+provides offline collection scripts at `.claude/skills/mongodb/`:
+- `offline-collect-cluster.sh` — runs mongosh diagnostics on the primary and saves
+  output to `/tmp/mongo-life-cluster.txt` for retrieval
+- `offline-collect-node.sh` — OS and service diagnostics per node
+- `OFFLINE-COLLECTION.md` — full step-by-step offline workflow (engineer reference)
+- `CUSTOMER-DATA-COLLECTION.md` — customer-shareable runbook for what to capture
+
 ---
 
 ## Phase 2: Redis Diagnostics
@@ -308,6 +343,39 @@ redis-cli -h {REDIS_HOST} -p {REDIS_PORT} ${REDIS_PASSWORD:+-a $REDIS_PASSWORD} 
 | `rdb_last_bgsave_status: err` | Last RDB save failed — check disk space |
 | `aof_last_write_status: err` | AOF write failed — check disk space |
 | AOF rewrite > 60s | Disk I/O pressure |
+
+### Step 2i — Platform Skill: Redis Full Life Report
+
+**When to invoke** — any one of these conditions is true:
+- Step 2b shows `used_memory` > 80% of `maxmemory`, or `evicted_keys` > 0
+- Step 2e shows sentinel topology issues or replication lag > 1s
+- `blocked_clients` > 0 persists after checking Bull queue depth (Step 2f)
+- Multiple Bull queue `failed` entries growing steadily
+- Engineer explicitly requests a scored comprehensive assessment of the Redis cluster
+
+**Prerequisites:** `REDIS_HOST`, `REDIS_PORT` in `.env`. Add `REDIS_PASSWORD` if the
+cluster requires auth.
+
+**Invoke:**
+```
+/redis
+```
+
+The `/redis` skill resolves the current Sentinel primary, authenticates using credentials
+from `.env`, and outputs a scored **HEALTHY / DEGRADED / CRITICAL** summary covering:
+- Redis Sentinel cluster topology (all sentinels, quorum state)
+- Replication lag across all replicas
+- Memory usage vs `maxmemory`, eviction policy, fragmentation ratio
+- Keyspace hit/miss ratio
+- Connected clients, blocked clients, max clients
+- AOF and RDB persistence state
+- Slow command log (last 20 commands > 10ms)
+- ACL user inventory
+- Recent log anomalies
+
+Additional tasks available once invoked: SCAN-based key search, session cache flush
+(`FLUSHDB` — requires explicit engineer approval), per-user password rotation, and
+no-TTL key deletion via server-side Lua (avoids exhausting `maxclients`).
 
 ---
 

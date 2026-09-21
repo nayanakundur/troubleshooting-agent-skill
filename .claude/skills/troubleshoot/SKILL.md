@@ -20,6 +20,18 @@ argument-hint: "[ISD ticket key or brief issue description]"
 | `/troubleshoot-infra` | CPU, memory, disk, FDs, container crashes, EKS, network connectivity |
 | `/troubleshoot-logs` | Log collection from IAP, IAG, MongoDB, Redis, LB — any deployment type |
 
+**Platform skills (from `platform-claude-skills`) — invoke for deep operational diagnostics:**
+
+| Platform Skill | When to invoke |
+|----------------|----------------|
+| `/itential-platform` | Deep IAP admin: adapter list, application status, job worker control (29 tasks) — supplements `/troubleshoot-jobs` when IAP-layer health is suspected |
+| `/itential-gateway` | IAG admin: health, logs, service list, etcd cluster — supplements inline IAG diagnostics when IAG itself (not the adapter) is the issue |
+| `/mongodb` | Full MongoDB replica set life report (scored HEALTHY/DEGRADED/CRITICAL) — invoke after `/troubleshoot-databases` surfaces replica or connection pool issues |
+| `/redis` | Full Redis Sentinel life report (scored HEALTHY/DEGRADED/CRITICAL) — invoke after `/troubleshoot-databases` surfaces eviction, sentinel topology, or persistence issues |
+| `/prometheus` | PromQL-based metrics analysis — invoke alongside `/troubleshoot-infra` when `PROMETHEUS_URL` is available and time-series evidence is needed |
+
+Platform skills require `GITLAB_TOKEN` in `.env` to sync. Run `scripts/sync-platform-skills.sh` to pull them before first use. See the **Platform Skills Staleness Gate** in Phase 2 Step 2b below.
+
 **Never duplicate what a sub-skill already covers.** Invoke the sub-skill and synthesize its output.
 
 ---
@@ -30,7 +42,7 @@ argument-hint: "[ISD ticket key or brief issue description]"
 - **No MongoDB writes** — read-only queries only
 - **No Redis writes** — no SET, DEL, FLUSHDB
 - **Never post comments to ISD tickets without explicit engineer consent** — present the draft comment and wait for approval before posting
-- **All ISD comments must be internal** — always set `commentVisibility: {"type": "role", "value": "Service Desk Team"}` on every `addCommentToJiraIssue` call. Never post a public/customer-visible comment on ISD tickets
+- **All ISD comments must be internal** — ISD is a Jira Service Management (JSM) project. The classic `visibility: {"type": "role", "value": "Service Desk Team"}` field on `/rest/api/3/issue/{key}/comment` is a **silent no-op on JSM** — it returns HTTP 201 with no error but posts the comment fully public (`jsdPublic: true`). Always post via `POST {JIRA_URL}/rest/servicedeskapi/request/{TICKET_KEY}/comment` with `{"body": "...", "public": false}` instead (see Step 2b for the verified pattern), and verify by re-fetching the comment and checking `jsdPublic == false`. Never post a public/customer-visible comment on ISD tickets
 - **Never create ENG tickets without explicit engineer consent** — present the draft bug report and wait for approval before filing
 - **Never link issues, transition tickets, or update any Jira fields** without explicit engineer consent
 - **Never restart services, adapters, or containers** without explicit user consent
@@ -99,6 +111,14 @@ JIRA_USER=you@itential.com
 JIRA_API_TOKEN=               # id.atlassian.net → Security → API tokens
 JIRA_PROJECTS=ENG,ISD
 
+# ── Platform Skills (platform-claude-skills sync) ──────────────────────────
+GITLAB_TOKEN=                 # GitLab Deploy Token — read_repository scope
+                              # Create: platform-claude-skills → Settings → Repository → Deploy tokens
+                              # Run: scripts/sync-platform-skills.sh  (once after adding token)
+JFROG_TOKEN=                  # JFrog Identity Token — pull platform RPMs from itential.jfrog.io
+                              # Generate: itential.jfrog.io → User Profile → Generate Identity Token
+                              # Run: scripts/pull-platform-rpms.sh --version {IAP_VERSION}
+
 # ── Slack (for escalation messages) ───────────────────────────
 SLACK_SUPPORT_CHANNEL=#isd-support
 SLACK_ESCALATION_CHANNEL=#support-escalations
@@ -122,7 +142,7 @@ After reading `.env`, check which groups are missing and tell the user:
 
 The **Itential Product Support Investigation Protocol** (8 sections) is not a phase — it is a communication standard that runs throughout the entire investigation lifecycle. Apply it at every phase. Every interaction with the customer must follow it.
 
-**Never treat this as a one-time questionnaire.** At any point — Phase 1 through Phase 6 — if a section is incomplete, contradicted by new findings, or a gap is surfaced by a sub-skill, update it and post an internal ISD comment (`commentVisibility: {"type": "role", "value": "Service Desk Team"}`).
+**Never treat this as a one-time questionnaire.** At any point — Phase 1 through Phase 6 — if a section is incomplete, contradicted by new findings, or a gap is surfaced by a sub-skill, update it and post an internal ISD comment via the servicedesk API (`public: false` — see Step 2b).
 
 | Section | What it covers | When it's primarily addressed |
 |---|---|---|
@@ -197,7 +217,39 @@ Based on ticket context, platform version, symptom description, and Investigatio
 | Log evidence needed for any issue | `/troubleshoot-logs {component} {incident time}` | Sub-skill authenticates from `.env` |
 | IAG adapter OFFLINE / GatewayManager error | `/troubleshoot-adapters {IAG_ADAPTER_NAME}` | Inline IAG diagnostics follow adapter investigation |
 | Kafka adapter OFFLINE / consumer lag growing | `/troubleshoot-adapters {KAFKA_ADAPTER_NAME}` | Routes to Phase 4 (Kafka) in the sub-skill |
+| OSS tool issue (deployer, Helm chart, job-archiver, IPCTL, MCP, dev-stack) | `/troubleshoot-oss {OSS_TOOL}` | Uses GitHub public API — no auth needed; detects tool from ticket signals if no argument given |
 | UI slow / API timeouts | Inline diagnostics in Step 2b (see below) + `/troubleshoot-logs` | — |
+
+**Platform Skills Staleness Gate**
+
+Before invoking any platform skill (`/itential-platform`, `/itential-gateway`, `/mongodb`,
+`/redis`, `/prometheus`), check that the skill files are current — once per session:
+
+```bash
+scripts/sync-platform-skills.sh --check
+```
+
+- **Up to date** → proceed to routing.
+- **Out of date** → present to engineer:
+  ```
+  ⚠️  platform-skills is out of date. Sync to get the latest diagnostic skills?
+  [yes / no / skip]
+  ```
+  - `yes` → run `scripts/sync-platform-skills.sh`, show changed files, proceed
+  - `no` → proceed with existing copy; note "using stale platform-skills copy" in `diagnostic_report.md`
+  - `skip` → proceed, suppress the check for the rest of this session
+- **Check failed** (no `GITLAB_TOKEN`, network unavailable) → note "staleness unknown,
+  proceeding with existing copy" and continue — do not block the investigation
+
+**Platform skill routing** (after diagnostic sub-skill surfaces a signal):
+
+| Signal from diagnostic sub-skill | Platform skill | Trigger condition |
+|---|---|---|
+| `/troubleshoot-databases` finds replica lag, elections, or pool saturation > 80% | `/mongodb` | Invoke for scored life report and oplog/contention analysis |
+| `/troubleshoot-databases` finds eviction, sentinel topology issue, or `blocked_clients` > 0 | `/redis` | Invoke for scored life report and keyspace/persistence analysis |
+| `/troubleshoot-infra` finds sustained CPU > 2× cores or memory pressure on IAP nodes | `/prometheus` | Invoke if `PROMETHEUS_URL` set; pass incident time window for scoped range queries |
+| `/troubleshoot-jobs` finds WFE workers not processing or adapter application unhealthy | `/itential-platform` | Invoke for IAP application status, job worker counts, and event-loop lag check |
+| IAG is implicated as the failure point (not just the adapter it hosts) | `/itential-gateway` | Invoke for IAG health, etcd cluster status, service list, and log tail |
 
 Each sub-skill authenticates itself from `.env` when invoked — the orchestrator does not pre-authenticate.
 
@@ -341,13 +393,36 @@ Using the authenticated session from Step 3a, attempt to trigger the confirmed r
 
 **If the engineer selected a customer environment** (`.env` or `.env.{label}`): run the triggering steps directly. Do not make changes without explicit approval.
 
-**If the engineer wants an isolated local reproduction environment**: proceed to Step 3b.1 to scaffold a version-matched local stack.
+**If the engineer wants an isolated local reproduction environment**: proceed to Step 3b.0 to select the deployment type, then Step 3b.1 to scaffold the environment.
+
+---
+
+### Step 3b.0 — Select Reproduction Deployment Type (when isolated env needed)
+
+Before scaffolding, ask the engineer how they want to build the reproduction environment:
+
+```
+How would you like to build the reproduction environment?
+
+  1) Docker local   — this machine (fastest, dev/test only)
+  2) Docker on VM   — SSH to an existing Linux VM
+  3) Kubernetes     — Helm charts on an existing cluster
+  4) VMs on AWS     — Themis (/themis-aws-deploy)
+
+Choice [1-4] (default: 1 — Docker local):
+```
+
+- **Options 1-3:** invoke `/deploy-containers` skill. It handles ECR auth, dev stack setup, and creates `repro/{ISD_TICKET_KEY}/.env` automatically. Return here after `/deploy-containers` completes.
+- **Option 4:** invoke `/themis-aws-deploy` skill instead. Return here after the environment is up.
+- **If engineer has no preference or says "just docker":** default to option 1 (Docker local) without prompting further.
 
 ---
 
 ### Step 3b.1 — Scaffold Local Reproduction Environment (when needed)
 
 Create an isolated `.env` under `repro/{ISD_TICKET_KEY}/` to keep Docker-local credentials separate from customer credentials. This is the local reproduction path.
+
+> **Note:** If Step 3b.0 selected Docker or K8s, `/deploy-containers` already created `repro/{ISD_TICKET_KEY}/.env`. Skip to Step 3c — the env file is ready.
 
 ---
 
@@ -659,35 +734,31 @@ Before closing the questionnaire phase, verify all 8 sections are documented on 
 
 Compose the questionnaire from the unanswered sections above and post it as a Jira comment. Only ask what the ticket has not already answered.
 
+**ISD is a Jira Service Management (JSM) project — use the servicedesk API, not the classic comment API.** The classic `/rest/api/3/issue/{key}/comment` endpoint's `visibility: {"type": "role", ...}` field is a silent no-op on JSM projects: it returns HTTP 201 with no error, but the comment posts fully public/customer-visible (`jsdPublic: true`). Always post via the servicedesk endpoint with `"public": false` instead, and always verify afterward.
+
 ```bash
 # Compose targeted questions from sections not yet answered in the ticket
-# Then post as a comment
+# Then post as an internal note via the Service Desk API (plain text body — no ADF wrapping needed)
 
-curl -s -X POST "${JIRA_URL}/rest/api/3/issue/${TICKET_KEY}/comment" \
+curl -s -X POST "${JIRA_URL}/rest/servicedeskapi/request/${TICKET_KEY}/comment" \
   -u "${JIRA_USER}:${JIRA_API_TOKEN}" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d "{
-    \"body\": {
-      \"type\": \"doc\",
-      \"version\": 1,
-      \"content\": [{
-        \"type\": \"paragraph\",
-        \"content\": [{\"type\": \"text\", \"text\": \"{QUESTIONNAIRE_TEXT}\"}]
-      }]
-    },
-    \"visibility\": {\"type\": \"role\", \"value\": \"Service Desk Team\"}
-  }"
+  -d "{\"body\": \"${QUESTIONNAIRE_TEXT}\", \"public\": false}"
+
+# Verify it actually posted internal (do this after every ISD comment post):
+curl -s "${JIRA_URL}/rest/api/3/issue/${TICKET_KEY}/comment" \
+  -u "${JIRA_USER}:${JIRA_API_TOKEN}" -H "Accept: application/json" \
+  | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+c=d['comments'][-1]
+assert c.get('jsdPublic') == False, '⚠️ COMMENT POSTED PUBLIC — jsdPublic is not false!'
+print('OK — comment', c['id'], 'is internal (jsdPublic: false)')
+"
 ```
 
-If using Atlassian MCP (preferred):
-```
-mcp__claude_ai_Atlassian_MCP__addCommentToJiraIssue(
-  issueIdOrKey: "{ISD_TICKET_KEY}",
-  commentBody: "{QUESTIONNAIRE_TEXT}",
-  commentVisibility: {"type": "role", "value": "Service Desk Team"}
-)
-```
+If using Atlassian MCP: verify whether the MCP tool's `commentVisibility`/similar parameter actually maps to the JSM `public` flag for this instance before relying on it — do not assume role-based visibility works on a JSM project just because the MCP tool accepts the parameter. When in doubt, use the curl pattern above, which is verified to work.
 
 **Questionnaire opening line to use:**
 > "Thank you for raising this issue. To help us investigate efficiently, we have a few questions. We will begin our investigation in parallel and will update this ticket as we progress."
@@ -1076,6 +1147,53 @@ If the asset type is a **JSON Form, MOP command template, or LCM action workflow
 
 ---
 
+### Step 4b.6 — Alternative: RPM-Based Reproduction (VM / Bare-Metal) [optional, when `JFROG_TOKEN` is set]
+
+Skip this step if the Docker path (Step 4b) is sufficient. Use the RPM path when:
+- The issue requires a full OS-level install (systemd services, file permissions, upgrade path)
+- Reproducing on a VM that matches the customer's bare-metal topology via the Ansible deployer
+- The Docker image is unavailable for the specific patch version
+
+**Pull platform RPMs from JFrog:**
+
+```bash
+# Verify token first (one-time check per session)
+scripts/pull-platform-rpms.sh --check
+
+# Browse available files for this version without downloading
+scripts/pull-platform-rpms.sh --version {IAP_VERSION} --list
+
+# Download all components (auto-routes to correct JFrog repos)
+scripts/pull-platform-rpms.sh --version {IAP_VERSION} --out-dir repro/{ISD_TICKET_KEY}/rpms
+```
+
+**Version routing (automatic):**
+- `23.2.x` / `2023.x` and below → `itential-config-service-files` (single legacy repo)
+- `6.x+` (P6) → per-component repos: `PLATFORM`, `CONFIG`, `GATEWAY-MANAGER`, `INVENTORY-MANAGER`, `SERVICE`, `FLOWAI`
+
+**Download specific components only (P6):**
+```bash
+scripts/pull-platform-rpms.sh --version {IAP_VERSION} \
+  --components platform,config,gateway-manager \
+  --out-dir repro/{ISD_TICKET_KEY}/rpms
+```
+
+**After download, RPMs land in `repro/{ISD_TICKET_KEY}/rpms/` with a `JFROG_MANIFEST.json`.**
+
+Install directly on a local VM:
+```bash
+sudo dnf install repro/{ISD_TICKET_KEY}/rpms/*.rpm
+```
+
+Or pass the paths as `platform_packages` in `run-vars.yml` to feed the Ansible deployer
+(see `/themis-aws-deploy` skill for the full VM deployment workflow).
+
+**If `JFROG_TOKEN` is missing:** the script exits with instructions to generate one at
+`itential.jfrog.io → User Profile → Generate Identity Token`. This is a per-engineer
+token — not shared via 1Password.
+
+---
+
 ### Step 4c — Reproduce the Specific Scenario
 
 Write reproduction steps based on the ticket context:
@@ -1240,7 +1358,7 @@ Ask:
 ```
 Post this outage summary report as an internal comment on {TICKET_KEY}? [yes / no]
 ```
-If yes: post with `commentVisibility: {"type": "role", "value": "Service Desk Team"}`. Present the comment draft before posting (same approval gate as all Jira writes).
+If yes: post via the servicedesk API with `"public": false` (see Step 2b — the classic API's `visibility` block is a no-op on JSM). Present the comment draft before posting (same approval gate as all Jira writes).
 
 #### Step 4-OR-6 — Offer to create a Problem ticket for RCA tracking
 
@@ -1298,7 +1416,7 @@ Create Problem ticket? [yes / no]
    ```
    Problem ticket {NEW_PROBLEM_KEY} created for RCA tracking. [link]
    ```
-   (commentVisibility: Service Desk Team — same gate as all Jira writes)
+   (servicedesk API, `public: false` — see Step 2b; same approval gate as all Jira writes)
 
 6. Save `problem_ticket_key: {NEW_PROBLEM_KEY}` to `ticket_context.md`.
 
@@ -1572,6 +1690,61 @@ mcp__claude_ai_Atlassian_MCP__createIssueLink(
 
 Run this phase when a fix is confirmed — either by Engineering releasing a patch, or by a workaround resolving the customer's issue.
 
+### Step 6-pre — Confirm ENG Ticket Status
+
+Before writing the resolution record, determine whether an ENG ticket exists for this issue.
+This must run even when Phase 5 was skipped (e.g. a workaround resolved the issue without formal escalation).
+
+**Step 1 — Check Jira for any ENG ticket already linked to this ISD ticket:**
+```bash
+curl -s "${JIRA_URL}/rest/api/3/issue/${ISD_TICKET_KEY}/remotelink" \
+  -u "${JIRA_USER}:${JIRA_API_TOKEN}" | python3 -c "
+import sys, json
+for link in json.load(sys.stdin):
+    url = link.get('object', {}).get('url', '')
+    title = link.get('object', {}).get('title', '')
+    if 'ENG-' in title or 'ENG-' in url:
+        print('Linked ENG:', title)
+"
+```
+
+Also check for issue links (not just remote links):
+```bash
+curl -s "${JIRA_URL}/rest/api/3/issue/${ISD_TICKET_KEY}?fields=issuelinks" \
+  -u "${JIRA_USER}:${JIRA_API_TOKEN}" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+for link in d.get('fields', {}).get('issuelinks', []):
+    for side in ('inwardIssue', 'outwardIssue'):
+        issue = link.get(side, {})
+        key = issue.get('key', '')
+        if key.startswith('ENG-'):
+            print('Linked ENG:', key, '|', issue.get('fields', {}).get('summary', ''))
+"
+```
+
+**Step 2 — Check `diagnostic_report.md` and `eng_ticket_draft.md` for any ENG ticket key:**
+```bash
+grep -oE 'ENG-[0-9]+' data/*/*/diagnostic_report.md data/*/*/eng_ticket_draft.md 2>/dev/null | sort -u
+```
+
+**Step 3 — Evaluate and act:**
+
+- If an ENG ticket key is found (from any source above): set `ENG_TICKET_KEY = <found key>`. Proceed to Step 6a.
+- If no ENG ticket exists AND the root cause is a **platform bug** (not a misconfiguration or workaround-only issue):
+  Present to the engineer:
+  > "Root cause is a platform bug. No ENG ticket has been filed yet. File one now to track the fix?
+  > Proposed summary: `[{ISD_TICKET_KEY}] {SHORT_ROOT_CAUSE}`
+  > Reply yes/no — if yes, I will create the ENG ticket and link it to this ISD ticket before recording the resolution."
+  
+  If engineer says **yes**: follow Phase 5 Step 5b to create and link the ENG ticket, capture `ENG_TICKET_KEY`.
+  If engineer says **no**: set `ENG_TICKET_KEY = N/A`.
+- If no ENG ticket exists AND root cause is a misconfiguration or environment issue: set `ENG_TICKET_KEY = N/A`.
+
+**The `ENG_TICKET_KEY` value from this step is required for Step 6a. Never leave it as a placeholder — it must be a real key or the literal string `N/A`.**
+
+---
+
 ### Step 6a — Record the Resolution Pattern
 
 Append to `{project_path}/data/known-resolutions.md`:
@@ -1579,7 +1752,7 @@ Append to `{project_path}/data/known-resolutions.md`:
 ```markdown
 ---
 ## {SHORT_TITLE}
-**Ticket:** {ISD_TICKET_KEY} | **ENG:** {ENG_TICKET_KEY or N/A}
+**Ticket:** {ISD_TICKET_KEY} | **ENG:** {ENG_TICKET_KEY — from Step 6-pre; use actual key or literal N/A}
 **Date resolved:** {TODAY}
 **IAP Versions affected:** {list}
 **Fix version:** {vX.Y.Z or "workaround only"}
@@ -1624,20 +1797,13 @@ $(if [ -n "{WORKAROUND}" ]; then echo "Workaround (if not yet on fix version): {
 
 ENG Ticket: {ENG_TICKET_KEY or 'N/A — no platform bug identified'}"
 
-curl -s -X POST "${JIRA_URL}/rest/api/3/issue/${TICKET_KEY}/comment" \
+curl -s -X POST "${JIRA_URL}/rest/servicedeskapi/request/${TICKET_KEY}/comment" \
   -u "${JIRA_USER}:${JIRA_API_TOKEN}" \
   -H "Content-Type: application/json" \
-  -d "{\"body\": {\"type\": \"doc\", \"version\": 1, \"content\": [{\"type\": \"paragraph\", \"content\": [{\"type\": \"text\", \"text\": \"${RESOLUTION_COMMENT}\"}]}]}, \"visibility\": {\"type\": \"role\", \"value\": \"Service Desk Team\"}}"
+  -d "{\"body\": \"${RESOLUTION_COMMENT}\", \"public\": false}"
 ```
 
-If using Atlassian MCP:
-```
-mcp__claude_ai_Atlassian_MCP__addCommentToJiraIssue(
-  issueIdOrKey: "{ISD_TICKET_KEY}",
-  commentBody: "{RESOLUTION_COMMENT}",
-  commentVisibility: {"type": "role", "value": "Service Desk Team"}
-)
-```
+**ISD is a JSM project** — use `/rest/servicedeskapi/request/{key}/comment` with `"public": false`, not the classic `/rest/api/3/issue/{key}/comment` with a `visibility` block (that field is a silent no-op on JSM — see Step 2b for the full verified pattern and post-verification check). Always verify `jsdPublic == false` after posting.
 
 ---
 
@@ -1732,15 +1898,12 @@ priority they selected:**
    )
    ```
 
-4. **Post a triage comment on the ticket** explaining the priority change:
-   ```
-   mcp__claude_ai_Atlassian_MCP__addCommentToJiraIssue(
-     issueIdOrKey: "{ISD_TICKET_KEY}",
-     commentBody: "Priority upgraded from {OLD} to {NEW} based on triage review.
-   The customer's description indicates [blocking/production impact summary].
-   Senior management has been notified. Investigation is in progress.",
-     commentVisibility: {"type": "role", "value": "Service Desk Team"}
-   )
+4. **Post a triage comment on the ticket** explaining the priority change — use the servicedesk API (`public: false`), not the classic API's `visibility` block, which is a no-op on JSM (see Step 2b):
+   ```bash
+   curl -s -X POST "${JIRA_URL}/rest/servicedeskapi/request/${ISD_TICKET_KEY}/comment" \
+     -u "${JIRA_USER}:${JIRA_API_TOKEN}" \
+     -H "Content-Type: application/json" \
+     -d "{\"body\": \"Priority upgraded from {OLD} to {NEW} based on triage review. The customer's description indicates [blocking/production impact summary]. Senior management has been notified. Investigation is in progress.\", \"public\": false}"
    ```
 
 ---
@@ -1850,21 +2013,12 @@ This ticket has been escalated to management.
 {Specific ask from manager}
 ```
 
-Post via Jira:
+Post via Jira — ISD is a JSM project, so use the servicedesk API with `"public": false` (the classic API's `visibility` block is a silent no-op on JSM — see Step 2b):
 ```bash
-curl -s -X POST "${JIRA_URL}/rest/api/3/issue/${TICKET_KEY}/comment" \
+curl -s -X POST "${JIRA_URL}/rest/servicedeskapi/request/${TICKET_KEY}/comment" \
   -u "${JIRA_USER}:${JIRA_API_TOKEN}" \
   -H "Content-Type: application/json" \
-  -d "{\"body\": {\"type\": \"doc\", \"version\": 1, \"content\": [{\"type\": \"paragraph\", \"content\": [{\"type\": \"text\", \"text\": \"{ESCALATION_COMMENT}\"}]}]}, \"visibility\": {\"type\": \"role\", \"value\": \"Service Desk Team\"}}"
-```
-
-Or via Atlassian MCP:
-```
-mcp__claude_ai_Atlassian_MCP__addCommentToJiraIssue(
-  issueIdOrKey: "{ISD_TICKET_KEY}",
-  commentBody: "{ESCALATION_COMMENT}",
-  commentVisibility: {"type": "role", "value": "Service Desk Team"}
-)
+  -d "{\"body\": \"{ESCALATION_COMMENT}\", \"public\": false}"
 ```
 
 ---

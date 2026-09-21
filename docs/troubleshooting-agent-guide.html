@@ -312,6 +312,7 @@
       padding: 18px 20px;
       overflow-x: auto;
       margin: 16px 0;
+      position: relative;
     }
     .code-block pre {
       font-family: 'JetBrains Mono', monospace;
@@ -324,6 +325,26 @@
     .code-block .cmd { color: var(--pink-soft); }
     .code-block .section-hdr { color: var(--orange); font-weight: 600; }
     .code-block .prompt { color: var(--muted); user-select: none; }
+
+    /* ── Copy button ── */
+    .copy-btn {
+      position: absolute; top: 8px; right: 8px;
+      display: flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 5px;
+      border: 1px solid var(--border);
+      background: var(--surface); color: var(--muted);
+      font-size: 11px; font-family: 'JetBrains Mono', monospace;
+      cursor: pointer; opacity: 0; transition: opacity .15s, color .15s, border-color .15s;
+      user-select: none; white-space: nowrap;
+    }
+    .copy-btn svg { width: 12px; height: 12px; flex-shrink: 0; }
+    .code-block:hover .copy-btn,
+    .arch-pane:hover .copy-btn { opacity: 1; }
+    .copy-btn:hover { color: var(--text); border-color: var(--pink); }
+    .copy-btn.copied { color: #86efac; border-color: #86efac; opacity: 1; }
+    /* arch-pane copy button sits at top-right of the pane */
+    .arch-pane { position: relative; }
+    .arch-pane > .copy-btn { top: 10px; right: 10px; }
 
     .inline-code {
       font-family: 'JetBrains Mono', monospace;
@@ -457,6 +478,411 @@
     }
     footer .brand { display: flex; align-items: center; gap: 8px; }
     footer .brand img { height: 18px; width: auto; }
+
+    /* ── Executive Summary ── */
+    .exec-hero {
+      background: linear-gradient(135deg, #14173a 0%, #1a0a2e 100%);
+      border: 1px solid var(--pink);
+      border-radius: 12px;
+      padding: 40px 48px;
+      margin-bottom: 40px;
+      text-align: center;
+    }
+    .exec-tagline {
+      font-family: 'Oswald', sans-serif;
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+    .exec-sub {
+      font-size: 14px;
+      color: var(--muted);
+      max-width: 640px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+    .exec-obj-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .exec-obj-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 28px 22px;
+      text-align: center;
+      transition: border-color .15s;
+    }
+    .exec-obj-card:hover { border-color: var(--pink); }
+    .exec-obj-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+      line-height: 1;
+    }
+    .exec-obj-title {
+      font-family: 'Oswald', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 8px;
+    }
+    .exec-obj-desc {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .exec-problem-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 14px;
+    }
+    .exec-problem-card {
+      background: var(--card);
+      border: 1px solid #3a1a1a;
+      border-left: 3px solid #ef4444;
+      border-radius: 8px;
+      padding: 18px 20px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .exec-problem-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .exec-problem-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .exec-problem-desc {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .exec-persona-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+    }
+    .exec-persona-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px 18px;
+      text-align: center;
+    }
+    .exec-persona-icon {
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+    .exec-persona-role {
+      font-family: 'Oswald', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--pink-soft);
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      margin-bottom: 6px;
+    }
+    .exec-persona-use {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .kpi-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 28px 20px;
+      text-align: center;
+      transition: border-color .15s;
+    }
+    .kpi-card:hover { border-color: var(--pink); }
+    .kpi-number {
+      font-family: 'Oswald', sans-serif;
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--pink-soft);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .kpi-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 8px;
+    }
+    .kpi-desc {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .roadmap-track {
+      position: relative;
+      margin-top: 32px;
+    }
+    .roadmap-track::before {
+      content: '';
+      position: absolute;
+      left: 28px;
+      top: 0; bottom: 0;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--pink), #2563eb, #16a34a);
+    }
+    .roadmap-item {
+      position: relative;
+      padding: 0 0 28px 68px;
+      display: flex;
+      align-items: flex-start;
+      gap: 0;
+    }
+    .roadmap-item:last-child { padding-bottom: 0; }
+    .roadmap-badge {
+      position: absolute;
+      left: 14px;
+      top: 12px;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      border: 2px solid var(--surface);
+      flex-shrink: 0;
+    }
+    .roadmap-content {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 24px;
+      flex: 1;
+      transition: border-color .15s;
+    }
+    .roadmap-content:hover { border-color: var(--pink); }
+    .roadmap-title {
+      font-family: 'Oswald', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      margin-bottom: 8px;
+    }
+    .roadmap-bullets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .roadmap-bullet {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    /* ── Prerequisites tab ── */
+    .prereq-matrix {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-bottom: 0;
+    }
+    .prereq-matrix th {
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: .8px;
+      text-transform: uppercase;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .prereq-matrix td {
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      vertical-align: middle;
+      text-align: center;
+    }
+    .prereq-matrix td.skill-name {
+      text-align: left;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--pink-soft);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .prereq-matrix tr:nth-child(even) td { background: color-mix(in srgb, var(--surface) 50%, transparent); }
+    .cell-req {
+      background: color-mix(in srgb, #22c55e 12%, transparent);
+      color: #22c55e;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .cell-opt {
+      background: color-mix(in srgb, #f59e0b 10%, transparent);
+      color: #f59e0b;
+      font-size: 13px;
+    }
+    .cell-no { color: var(--border); font-size: 13px; }
+    .prereq-setup-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    .prereq-setup-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 22px 20px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .prereq-setup-icon { font-size: 28px; flex-shrink: 0; }
+    .prereq-setup-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 5px;
+    }
+    .prereq-setup-desc { font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+    .prereq-skill-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+    .prereq-skill-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 22px 20px;
+    }
+    .prereq-skill-card.pink  { border-left: 4px solid var(--pink); }
+    .prereq-skill-card.purple{ border-left: 4px solid var(--c-purple-border); }
+    .prereq-skill-card.blue  { border-left: 4px solid var(--c-blue-border); }
+    .prereq-skill-card.olive { border-left: 4px solid var(--c-olive-border); }
+    .prereq-skill-title {
+      font-family: 'Oswald', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+    .prereq-skill-card.pink  .prereq-skill-title { color: var(--pink-soft); }
+    .prereq-skill-card.purple .prereq-skill-title { color: var(--c-purple-border); }
+    .prereq-skill-card.blue  .prereq-skill-title { color: var(--c-blue-border); }
+    .prereq-skill-card.olive .prereq-skill-title { color: var(--c-olive-border); }
+    .prereq-skill-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+    .prereq-skill-row .dot { flex-shrink: 0; margin-top: 3px; font-size: 8px; color: var(--muted); }
+    .prereq-skill-row strong { color: var(--text); }
+    .prereq-skill-row span { color: var(--muted); }
+    .prereq-iam-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .prereq-iam-table th {
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: .8px;
+      text-transform: uppercase;
+      padding: 9px 14px;
+      border: 1px solid var(--border);
+      text-align: left;
+    }
+    .prereq-iam-table td {
+      padding: 9px 14px;
+      border: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .prereq-iam-table td:first-child {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--logo-blue);
+    }
+    .prereq-iam-table tr:nth-child(even) td {
+      background: color-mix(in srgb, var(--surface) 40%, transparent);
+    }
+    .prereq-os-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .prereq-os-table th {
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: .8px;
+      text-transform: uppercase;
+      padding: 9px 14px;
+      border: 1px solid var(--border);
+      text-align: left;
+    }
+    .prereq-os-table td {
+      padding: 9px 14px;
+      border: 1px solid var(--border);
+      vertical-align: middle;
+      font-size: 12px;
+    }
+    .prereq-os-table td:first-child {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--pink-soft);
+    }
+    .prereq-os-table tr:nth-child(even) td {
+      background: color-mix(in srgb, var(--surface) 40%, transparent);
+    }
+    .prereq-checklist {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .prereq-check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 12.5px;
+    }
+    .prereq-check-box {
+      width: 16px;
+      height: 16px;
+      border: 1.5px solid var(--border);
+      border-radius: 3px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
   </style>
 </head>
 <body>
@@ -473,7 +899,9 @@
 
 <!-- ── Tab Navigation ─────────────────────────────────────────── -->
 <div class="tab-nav">
+  <button class="tab-btn" onclick="showTab('exec')">&#9642; Executive Summary</button>
   <button class="tab-btn active" onclick="showTab('overview')">&#9642; Overview &amp; Architecture</button>
+  <button class="tab-btn" onclick="showTab('prereqs')">&#9642; Prerequisites</button>
   <button class="tab-btn" onclick="showTab('user')">&#9642; User Guide</button>
   <button class="tab-btn" onclick="showTab('admin')">&#9642; Admin Guide</button>
   <button class="tab-btn" onclick="showTab('subskills')">&#9642; Sub-Skills Reference</button>
@@ -485,6 +913,331 @@
   <div class="toc-title">On This Page</div>
   <div id="toc-links"></div>
 </nav>
+
+<!-- ══════════════════════════════════════════════════════════════
+     TAB 0: EXECUTIVE SUMMARY
+     ══════════════════════════════════════════════════════════════ -->
+<div id="tab-exec" class="tab-content">
+
+  <!-- Hero -->
+  <div class="exec-hero">
+    <div class="exec-tagline">AI-Augmented Support Engineering</div>
+    <div class="exec-sub">Troubleshooting Agent Skills eliminate the most expensive inefficiencies in Itential Platform support — structured investigation, automated data collection, and self-building institutional knowledge.</div>
+  </div>
+
+  <!-- Objectives -->
+  <div class="section">
+    <div class="section-label">Mission</div>
+    <h2>Objectives</h2>
+    <div class="exec-obj-grid">
+      <div class="exec-obj-card">
+        <div class="exec-obj-icon">&#127919;</div>
+        <div class="exec-obj-title">Structured Investigation</div>
+        <div class="exec-obj-desc">7-phase lifecycle enforced on every ticket — no step skipped under pressure.</div>
+      </div>
+      <div class="exec-obj-card">
+        <div class="exec-obj-icon">&#9889;</div>
+        <div class="exec-obj-title">Automated Data Collection</div>
+        <div class="exec-obj-desc">MongoDB, Redis, Prometheus, adapters, and logs pulled in minutes — not 30–90 min of manual commands.</div>
+      </div>
+      <div class="exec-obj-card">
+        <div class="exec-obj-icon">&#128218;</div>
+        <div class="exec-obj-title">Knowledge Accumulation</div>
+        <div class="exec-obj-desc">Every closed investigation feeds <code>known-resolutions.md</code> — future triage gets faster over time.</div>
+      </div>
+      <div class="exec-obj-card">
+        <div class="exec-obj-icon">&#9729;</div>
+        <div class="exec-obj-title">Environment Automation</div>
+        <div class="exec-obj-desc">AIO → ASA reproductions in AWS with a single skill invocation. No shared-environment bottleneck.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Problems -->
+  <div class="section">
+    <div class="section-label">Why This Matters</div>
+    <h2>Problems &amp; Challenges Addressed</h2>
+    <div class="exec-problem-grid">
+      <div class="exec-problem-card">
+        <div class="exec-problem-icon">&#128301;</div>
+        <div>
+          <div class="exec-problem-title">Inconsistent Investigation Depth</div>
+          <div class="exec-problem-desc">Thoroughness varies by engineer experience. Skills enforce baseline coverage — replica set elections, Redis eviction, Bull queues — on every ticket.</div>
+        </div>
+      </div>
+      <div class="exec-problem-card">
+        <div class="exec-problem-icon">&#128203;</div>
+        <div>
+          <div class="exec-problem-title">Context Loss at Handoff</div>
+          <div class="exec-problem-desc">Investigation context lives in Jira comments and disappears at handoff. Skills generate structured <code>diagnostic_report.md</code> artifacts that travel with the ticket.</div>
+        </div>
+      </div>
+      <div class="exec-problem-card">
+        <div class="exec-problem-icon">&#128260;</div>
+        <div>
+          <div class="exec-problem-title">Repeat Diagnosis of Known Issues</div>
+          <div class="exec-problem-desc">MongoDB COLLSCAN and Redis eviction patterns re-diagnosed from scratch on every ticket. Known-resolutions matching breaks this cycle.</div>
+        </div>
+      </div>
+      <div class="exec-problem-card">
+        <div class="exec-problem-icon">&#9201;</div>
+        <div>
+          <div class="exec-problem-title">Slow Reproduction Setup</div>
+          <div class="exec-problem-desc">HA2 / ASA environments took 2–4 hours of manual AWS console work. <code>/themis-aws-deploy</code> cuts that to 44–68 min, automated.</div>
+        </div>
+      </div>
+      <div class="exec-problem-card">
+        <div class="exec-problem-icon">&#128273;</div>
+        <div>
+          <div class="exec-problem-title">Credential &amp; Auth Overhead</div>
+          <div class="exec-problem-desc">Engineers manage credentials scattered across notes and local scripts. One <code>.env</code> file with token caching — set up once, used by all skills.</div>
+        </div>
+      </div>
+      <div class="exec-problem-card">
+        <div class="exec-problem-icon">&#128196;</div>
+        <div>
+          <div class="exec-problem-title">Weak ENG Escalations</div>
+          <div class="exec-problem-desc">Engineering receives "it's broken" comments requiring round-trips. Phase 5 generates structured ENG drafts with logs, version, and reproduction steps.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Target Audience -->
+  <div class="section">
+    <div class="section-label">Personas</div>
+    <h2>Target Audience</h2>
+    <div class="exec-persona-grid">
+      <div class="exec-persona-card">
+        <div class="exec-persona-icon">&#128100;</div>
+        <div class="exec-persona-role">Support Engineers</div>
+        <div class="exec-persona-use"><code>/troubleshoot ISD-XXXX</code> — full 7-phase investigation lifecycle, sub-skill routing, Phase 4 report generation</div>
+      </div>
+      <div class="exec-persona-card">
+        <div class="exec-persona-icon">&#128736;</div>
+        <div class="exec-persona-role">Platform Engineers</div>
+        <div class="exec-persona-use"><code>/themis-aws-deploy</code> for AWS env builds &amp; <code>/contribute</code> to add resolution patterns after ENG fix</div>
+      </div>
+      <div class="exec-persona-card">
+        <div class="exec-persona-icon">&#128202;</div>
+        <div class="exec-persona-role">Engineering Management</div>
+        <div class="exec-persona-use">Outage summary reports, post-mortem artifacts, escalation pattern tracking from <code>known-resolutions.md</code></div>
+      </div>
+      <div class="exec-persona-card">
+        <div class="exec-persona-icon">&#127891;</div>
+        <div class="exec-persona-role">New Team Members</div>
+        <div class="exec-persona-use">Skills as executable runbooks — structured guidance on first ticket, no deep platform expertise required from day one</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Flow Diagram -->
+  <div class="section">
+    <div class="section-label">How It Works</div>
+    <h2>Skill Usage Flow</h2>
+    <p class="desc">From ticket intake to knowledge base — the high-level investigation lifecycle.</p>
+
+    <!-- Custom HTML flow — no Mermaid dependency -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:32px 28px;overflow-x:auto;">
+
+      <!-- Main pipeline: 5 steps -->
+      <div style="display:flex;align-items:stretch;gap:0;min-width:600px;">
+
+        <div style="flex:1;background:#14173a;border:1px solid #ec1e7f;border-radius:8px;padding:16px 14px;text-align:center;">
+          <div style="font-size:10px;font-weight:700;color:#ec1e7f;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">01</div>
+          <div style="font-size:13px;font-weight:600;color:#e9eaf2;margin-bottom:4px;">Jira Ticket<br/>Received</div>
+          <div style="font-size:11px;color:#8b8fa8;">ISD / IPSO / ENG</div>
+        </div>
+
+        <div style="display:flex;align-items:center;padding:0 6px;color:#ec1e7f;font-size:18px;flex-shrink:0;">&#9654;</div>
+
+        <div style="flex:1;background:#1a1d42;border:1px solid #ec1e7f;border-radius:8px;padding:16px 14px;text-align:center;">
+          <div style="font-size:10px;font-weight:700;color:#ec1e7f;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">02</div>
+          <div style="font-size:13px;font-weight:600;color:#e9eaf2;margin-bottom:4px;">Triage</div>
+          <div style="font-size:11px;color:#8b8fa8;">Symptoms &amp; known issue matching</div>
+        </div>
+
+        <div style="display:flex;align-items:center;padding:0 6px;color:#8b8fa8;font-size:18px;flex-shrink:0;">&#9654;</div>
+
+        <div style="flex:1;background:#1a0a2e;border:1px solid #9b4de8;border-radius:8px;padding:16px 14px;text-align:center;">
+          <div style="font-size:10px;font-weight:700;color:#9b4de8;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">03</div>
+          <div style="font-size:13px;font-weight:600;color:#e9eaf2;margin-bottom:4px;">Sub-Skill<br/>Diagnosis</div>
+          <div style="font-size:11px;color:#8b8fa8;">Adapters, DB, Infra, Logs</div>
+        </div>
+
+        <div style="display:flex;align-items:center;padding:0 6px;color:#8b8fa8;font-size:18px;flex-shrink:0;">&#9654;</div>
+
+        <div style="flex:1;background:#1a0a2e;border:1px solid #9b4de8;border-radius:8px;padding:16px 14px;text-align:center;">
+          <div style="font-size:10px;font-weight:700;color:#9b4de8;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">04</div>
+          <div style="font-size:13px;font-weight:600;color:#e9eaf2;margin-bottom:4px;">Reproduce</div>
+          <div style="font-size:11px;color:#8b8fa8;">Vendor skills &amp; AWS env build</div>
+        </div>
+
+        <div style="display:flex;align-items:center;padding:0 6px;color:#8b8fa8;font-size:18px;flex-shrink:0;">&#9654;</div>
+
+        <div style="flex:1;background:#1a1d42;border:2px solid #ec1e7f;border-radius:8px;padding:16px 14px;text-align:center;">
+          <div style="font-size:10px;font-weight:700;color:#ec1e7f;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">05</div>
+          <div style="font-size:13px;font-weight:600;color:#e9eaf2;margin-bottom:4px;">Diagnostic<br/>Report</div>
+          <div style="font-size:11px;color:#8b8fa8;">Findings &amp; recommendations</div>
+        </div>
+
+      </div>
+
+      <!-- Connector line from step 05 down to outcomes -->
+      <div style="display:flex;justify-content:flex-end;padding-right:calc(0px);min-width:600px;">
+        <div style="width:calc(100% / 5);display:flex;justify-content:center;">
+          <div style="width:2px;height:24px;background:linear-gradient(to bottom,#ec1e7f,#8b8fa8);"></div>
+        </div>
+      </div>
+
+      <!-- Outcome row: 3 outcome boxes -->
+      <div style="display:flex;align-items:flex-start;gap:12px;min-width:600px;">
+
+        <!-- Spacer to push outcomes to align under step 05 -->
+        <div style="flex:4;"></div>
+        <div style="width:18px;flex-shrink:0;"></div><!-- arrow spacer -->
+
+        <!-- Three outcomes stacked -->
+        <div style="flex:1;display:flex;flex-direction:column;gap:10px;">
+
+          <div style="background:#0a1a0a;border:1px solid #22c55e;border-radius:8px;padding:14px;position:relative;">
+            <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#0a1a0a;padding:0 6px;font-size:10px;color:#22c55e;font-weight:700;white-space:nowrap;">RESOLVED</div>
+            <div style="font-size:12px;font-weight:600;color:#86efac;margin-bottom:3px;">Resolution Learning</div>
+            <div style="font-size:11px;color:#6b9e6b;">Pattern added to knowledge base</div>
+          </div>
+
+          <div style="background:#1a1208;border:1px solid #f59e0b;border-radius:8px;padding:14px;position:relative;">
+            <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#1a1208;padding:0 6px;font-size:10px;color:#f59e0b;font-weight:700;white-space:nowrap;">ESCALATION NEEDED</div>
+            <div style="font-size:12px;font-weight:600;color:#e9eaf2;margin-bottom:3px;">ENG Escalation</div>
+            <div style="font-size:11px;color:#8b8fa8;">Bug ticket filed with full evidence</div>
+          </div>
+
+          <div style="background:#1a0808;border:1px solid #ef4444;border-radius:8px;padding:14px;position:relative;">
+            <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#1a0808;padding:0 6px;font-size:10px;color:#ef4444;font-weight:700;white-space:nowrap;">SLA BREACHED</div>
+            <div style="font-size:12px;font-weight:600;color:#e9eaf2;margin-bottom:3px;">Manager Escalation</div>
+            <div style="font-size:11px;color:#8b8fa8;">Executive communication</div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ROI — KPI cards -->
+  <div class="section">
+    <div class="section-label">Value</div>
+    <h2>Return on Investment</h2>
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-number">40–60%</div>
+        <div class="kpi-label">MTTR Reduction</div>
+        <div class="kpi-desc">For P1/P2 tickets matching a known resolution pattern — triage surfaces the fix in minutes.</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-number">2–3×</div>
+        <div class="kpi-label">Engineer Throughput</div>
+        <div class="kpi-desc">More tickets per sprint — 30–90 min of data collection automated, time shifted to analysis.</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-number">44–68 min</div>
+        <div class="kpi-label">Repro Environment</div>
+        <div class="kpi-desc">Full HA2 or ASA platform build in AWS, down from 2–4 hours of manual console work.</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-number">0</div>
+        <div class="kpi-label">Knowledge Loss</div>
+        <div class="kpi-desc">Structured artifacts travel with every ticket. Investigation context survives handoffs and departures.</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-number">Day 1</div>
+        <div class="kpi-label">Onboarding Speed</div>
+        <div class="kpi-desc">New engineers run structured investigations from their first ticket — no platform expertise prerequisite.</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-number">Fewer</div>
+        <div class="kpi-label">ENG Round-Trips</div>
+        <div class="kpi-desc">Phase 5 auto-generates ENG tickets with logs, version, and repro steps — not "it's broken" comments.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Future Roadmap -->
+  <div class="section">
+    <div class="section-label">Roadmap</div>
+    <h2>Future Roadmap</h2>
+    <p class="desc">From internal support tool to multi-persona platform intelligence layer.</p>
+    <div class="roadmap-track">
+
+      <div class="roadmap-item">
+        <div class="roadmap-badge" style="background:var(--pink);">1</div>
+        <div class="roadmap-content">
+          <div class="roadmap-title">Multi-Persona Skill Access</div>
+          <div class="roadmap-bullets">
+            <span class="roadmap-bullet">Support Engineers — full investigation</span>
+            <span class="roadmap-bullet">Platform Eng — provisioning + benchmarking</span>
+            <span class="roadmap-bullet">Solutions Eng — demo environments</span>
+            <span class="roadmap-bullet">Management — summary reports only</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="roadmap-item">
+        <div class="roadmap-badge" style="background:#7c3aed;">2</div>
+        <div class="roadmap-content">
+          <div class="roadmap-title">Customer Self-Service Tier</div>
+          <div class="roadmap-bullets">
+            <span class="roadmap-bullet">Scoped skill bundle for customers</span>
+            <span class="roadmap-bullet">Read-only health checks + known-issue matching</span>
+            <span class="roadmap-bullet">Reduces initial triage calls</span>
+            <span class="roadmap-bullet">Delivered via customer-scoped GITLAB_TOKEN</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="roadmap-item">
+        <div class="roadmap-badge" style="background:#2563eb;">3</div>
+        <div class="roadmap-content">
+          <div class="roadmap-title">Platform Intelligence Knowledge Base</div>
+          <div class="roadmap-bullets">
+            <span class="roadmap-bullet">Version-correlated failure mapping</span>
+            <span class="roadmap-bullet">Customer topology pattern detection</span>
+            <span class="roadmap-bullet">Product gap signals for planning</span>
+            <span class="roadmap-bullet">Full-text artifact search index</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="roadmap-item">
+        <div class="roadmap-badge" style="background:#d97706;">4</div>
+        <div class="roadmap-content">
+          <div class="roadmap-title">Chatbot &amp; Automated Triage</div>
+          <div class="roadmap-bullets">
+            <span class="roadmap-bullet">Slack / Teams bot integration</span>
+            <span class="roadmap-bullet">Auto-triage on Jira ticket creation</span>
+            <span class="roadmap-bullet">Escalation alerting to on-call manager</span>
+            <span class="roadmap-bullet">Known-resolution API endpoint</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="roadmap-item">
+        <div class="roadmap-badge" style="background:#16a34a;">5</div>
+        <div class="roadmap-content">
+          <div class="roadmap-title">Fully Automated Investigation Agents</div>
+          <div class="roadmap-bullets">
+            <span class="roadmap-bullet">Autonomous diagnostics for known patterns</span>
+            <span class="roadmap-bullet">Auto-apply low-risk remediations (with approval gate)</span>
+            <span class="roadmap-bullet">Auto-draft customer communications</span>
+            <span class="roadmap-bullet">Post-resolution continuous health monitoring</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- end tab-exec -->
 
 <!-- ══════════════════════════════════════════════════════════════
      TAB 1: OVERVIEW & ARCHITECTURE
@@ -532,7 +1285,7 @@
         <div class="phase-num">3</div>
         <div class="phase-label">Auth Here</div>
         <h3>Reproduce &amp; Workaround</h3>
-        <p>Discovers all <span class="inline-code">.env</span> and <span class="inline-code">.env.*</span> files. If multiple exist, presents a numbered list showing each environment's <span class="inline-code">PLATFORM_URL</span> and asks engineer to choose. Authenticates with selected env. Reproduces root cause. Invokes builder-skills for workarounds in the same environment.</p>
+        <p>Discovers all <span class="inline-code">.env</span> and <span class="inline-code">.env.*</span> files. If multiple exist, presents a numbered list showing each environment's <span class="inline-code">PLATFORM_URL</span> and asks engineer to choose. Authenticates with selected env. Reproduces root cause. Invokes builder-skills for workarounds in the same environment. <em>Optionally</em> invokes platform skills (<span class="inline-code">/mongodb</span>, <span class="inline-code">/redis</span>, <span class="inline-code">/prometheus</span>, <span class="inline-code">/itential-platform</span>, <span class="inline-code">/itential-gateway</span>) to validate the reproduction environment's component health before or after reproducing the issue. For VM / bare-metal reproduction, pulls platform RPMs from JFrog using <span class="inline-code">scripts/pull-platform-rpms.sh</span> (requires <span class="inline-code">JFROG_TOKEN</span>).</p>
       </div>
       <div class="phase-card">
         <div class="phase-num">4</div>
@@ -588,6 +1341,7 @@ flowchart TD
     MAIN -->|"Phase 3 — auth after env select"| P3["Reproduce & Workaround<br/>.env selection → auth<br/>builder-skills for fixes"]
     P3 --> BS["vendor/builder-skills/<br/>JSON Helper Bundles"]
     P3 --> SK[".claude/skills/<br/>/builder-agent /qa-agent<br/>/itential-lcm /explore …"]
+    P3 -.->|"optional — validate<br/>repro environment"| PS["platform-skills<br/>/mongodb  /redis  /prometheus<br/>/itential-platform  /itential-gateway<br/><i>requires GITLAB_TOKEN in .env</i>"]
 
     MAIN -->|"Phase 4"| RPT["diagnostic_report.md<br/>ticket_context.md<br/>known_issues.md"]
     MAIN -->|"Phase 6"| RES["known-resolutions.md<br/>Resolution Library"]
@@ -606,6 +1360,73 @@ flowchart TD
     style RPT fill:#0a1a0a,stroke:#b8c22e,color:#e9eaf2
     style RES fill:#0a1a0a,stroke:#b8c22e,color:#e9eaf2
     style BS fill:#1a120a,stroke:#f27a1e,color:#e9eaf2
+    style SK fill:#1a120a,stroke:#f27a1e,color:#e9eaf2
+    style PS fill:#1a1209,stroke:#f5a623,stroke-width:2px,stroke-dasharray:5 3,color:#f5c842
+      </div>
+    </div>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- AI Agent Design -->
+  <div class="section">
+    <div class="section-label">Agent Design</div>
+    <h2>How the Agent Works — AI Design Patterns</h2>
+    <p class="desc">
+      The Troubleshooting Agent is built on a small set of well-established agentic AI patterns.
+      Understanding these helps explain why it behaves the way it does — why it pauses before writing,
+      why it loads different skill files for different problems, and how it accumulates knowledge across tickets.
+    </p>
+
+    <div class="cards">
+      <div class="card t-magenta">
+        <div class="icon">&#x2733;</div>
+        <h3>Orchestrator + Subagent</h3>
+        <p>One primary skill coordinates the investigation. It delegates targeted diagnostics to six specialist sub-skills — each owning a specific domain (adapters, databases, infra, etc.). Sub-skills run independently with their own authentication and report findings back to the orchestrator for synthesis.</p>
+        <span class="tag">Multi-agent</span><span class="tag">Delegation</span>
+      </div>
+      <div class="card t-purple">
+        <div class="icon">&#x1F4C4;</div>
+        <h3>Skill-as-Prompt</h3>
+        <p>Each "agent" is a structured markdown instruction file (<span class="inline-code">SKILL.md</span>) — not compiled code. The model loads the file, follows its phase-by-phase instructions, and executes the prescribed tool calls. Behavior is changed by editing a text file, not redeploying software.</p>
+        <span class="tag">Prompt-driven</span><span class="tag">No build step</span>
+      </div>
+      <div class="card t-blue">
+        <div class="icon">&#x1F504;</div>
+        <h3>Tool-Augmented Reasoning (ReAct)</h3>
+        <p>The model alternates between <em>reasoning</em> and <em>acting</em>: it formulates a hypothesis, calls a real tool (curl, SSH, AWS CLI, Jira MCP), observes the result, updates its model of the situation, and calls the next tool. This loop continues until the skill's exit condition is met.</p>
+        <span class="tag">Reason → Act → Observe</span><span class="tag">Real tool calls</span>
+      </div>
+      <div class="card t-orange">
+        <div class="icon">&#x1F512;</div>
+        <h3>Human-in-the-Loop Gates</h3>
+        <p>All destructive or write operations — Jira comments, adapter config changes, <span class="inline-code">tofu apply</span>, platform restart — require an explicit engineer "yes" before execution. The model presents the exact payload and waits. It cannot bypass a gate even in autonomous mode.</p>
+        <span class="tag">Approval required</span><span class="tag">Read-only default</span>
+      </div>
+      <div class="card t-olive">
+        <div class="icon">&#x1F5C2;</div>
+        <h3>Filesystem Memory</h3>
+        <p><strong>Short-term:</strong> per-ticket markdown files (<span class="inline-code">ticket_context.md</span>, <span class="inline-code">diagnostic_report.md</span>) written under <span class="inline-code">data/{TIMESTAMP}/</span>. <strong>Long-term:</strong> append-only <span class="inline-code">known-resolutions.md</span> that grows across all investigations. No vector database or embeddings — Claude's context window does the retrieval.</p>
+        <span class="tag">Per-ticket artifacts</span><span class="tag">Cumulative KB</span>
+      </div>
+      <div class="card t-red">
+        <div class="icon">&#x1F9E9;</div>
+        <h3>Vendor Skill Composition</h3>
+        <p>Platform skills and builder skills are vendored as instruction files from private/public GitLab and GitHub repos. Local overrides (<span class="inline-code">LOCAL-EXTENSIONS.md</span>) extend vendor behavior using <code>[OVERRIDE]</code> and <code>[INSERT AFTER Step N]</code> markers — without touching the upstream source, so syncs never overwrite customizations.</p>
+        <span class="tag">Plugin pattern</span><span class="tag">Sync-safe overrides</span>
+      </div>
+    </div>
+
+    <!-- Harness callout -->
+    <div style="margin-top: 28px;">
+      <div class="subsection-label">The Agent Harness — Claude Code</div>
+      <div class="rules">
+        <div class="rule"><div class="rule-text">
+          <strong>What is a harness?</strong> — An LLM can reason and produce text, but it cannot run a command, open a file, or call an API on its own. The <em>agent harness</em> is the runtime layer that wraps the model and gives it hands: it receives tool-call requests from the model, actually executes them (bash, file read, HTTP), and feeds the result back as the next observation in the loop. The harness also manages the context window (compacting old turns), enforces permission gates (allow/deny per tool), runs pre- and post-tool hooks, and controls the agentic loop itself (how many turns, when to stop).
+        </div></div>
+        <div class="rule"><div class="rule-text">
+          <strong>Claude Code is the harness here.</strong> — When an engineer types <span class="inline-code">/troubleshoot ISD-9261</span>, Claude Code loads <span class="inline-code">CLAUDE.md</span> and the relevant <span class="inline-code">SKILL.md</span> into context, starts the agentic loop, and executes every tool call the model emits — curl, SSH, AWS CLI, Jira MCP, file reads and writes. It enforces the permission mode (auto-approve safe reads, prompt for writes), runs the <span class="inline-code">Stop</span> hook when the session ends, and compacts context when it overflows — all invisible to the model. Without the harness, the SKILL.md files are just text; with it, they become a working agent.
+        </div></div>
       </div>
     </div>
   </div>
@@ -800,11 +1621,14 @@ flowchart TD
       <div class="indent-3"><span class="file">repro_steps.md</span> <span class="comment">← reproduction steps + evidence (Phase 3)</span></div>
       <div class="indent-3"><span class="file">docker-compose.yml</span> <span class="comment">← version-matched stack (Phase 3 local repro)</span></div>
       <div class="indent-1"><span class="dir">vendor/</span></div>
-      <div class="indent-2"><span class="dir">builder-skills/</span> <span class="comment">← vendored from github.com/itential/builder-skills</span></div>
+      <div class="indent-2"><span class="dir">builder-skills/</span> <span class="comment">← vendored from github.com/itential/builder-skills (public)</span></div>
       <div class="indent-3"><span class="dir">helpers/assets/</span> <span class="comment">← importable workflow projects (platform + vendor integrations)</span></div>
       <div class="indent-3"><span class="dir">helpers/assets/lcm/</span> <span class="comment">← LCM resource model exports + backing workflow projects</span></div>
       <div class="indent-3"><span class="dir">helpers/create/</span> <span class="comment">← bare workflow scaffold (create-workflow.json)</span></div>
       <div class="indent-3"><span class="file">SYNC_MANIFEST.json</span> <span class="comment">← upstream commit SHA + sync timestamp</span></div>
+      <div class="indent-3"><span class="file">SYNC_CHANGELOG.md</span> <span class="comment">← diff history per sync run</span></div>
+      <div class="indent-2"><span class="dir">platform-skills/</span> <span class="comment">← metadata for gitlab.com/itential/platform-engineering/platform-claude-skills (private)</span></div>
+      <div class="indent-3"><span class="file">SYNC_MANIFEST.json</span> <span class="comment">← vendored commit SHA + sync timestamp (skills land in .claude/skills/)</span></div>
       <div class="indent-3"><span class="file">SYNC_CHANGELOG.md</span> <span class="comment">← diff history per sync run</span></div>
       <div class="indent-1"><span class="file">.env</span> <span class="comment">← credentials (never committed to git)</span></div>
       <div class="indent-1"><span class="file">.auth.json</span> <span class="comment">← cached auth token (50 min TTL)</span></div>
@@ -817,6 +1641,357 @@ flowchart TD
 <!-- ══════════════════════════════════════════════════════════════
      TAB 2: USER GUIDE
      ══════════════════════════════════════════════════════════════ -->
+<div id="tab-prereqs" class="tab-content">
+  <div class="content-wrap">
+
+    <!-- Hero -->
+    <div class="exec-hero" style="margin-bottom:32px;">
+      <div class="exec-tagline">Before You Start</div>
+      <div class="exec-sub">A complete access checklist for every skill. Scan the matrix to identify gaps, then follow the one-time setup steps below. Each skill group card links to the Admin Guide for full configuration detail.</div>
+    </div>
+
+    <!-- Section 1: Capability Matrix -->
+    <div class="section">
+      <div class="section-label">Access Matrix</div>
+      <h2 class="section-heading">Capability Access Matrix</h2>
+      <p style="font-size:12.5px;color:var(--muted);margin-bottom:20px;">
+        <strong style="color:#22c55e;">✅ Required</strong> &nbsp;|&nbsp;
+        <strong style="color:#f59e0b;">⚡ Optional</strong> — unlocks deeper diagnostics &nbsp;|&nbsp;
+        <strong style="color:var(--border);">—</strong> Not needed
+      </p>
+      <div style="overflow-x:auto;border-radius:10px;border:1px solid var(--border);">
+        <table class="prereq-matrix">
+          <thead>
+            <tr>
+              <th style="text-align:left;min-width:220px;">Skill</th>
+              <th>IAP Creds</th>
+              <th>Jira Token</th>
+              <th>SSH Key</th>
+              <th>Mongo URL</th>
+              <th>Redis Host</th>
+              <th>AWS Profile</th>
+              <th>Vault Token</th>
+              <th>JFrog Token</th>
+              <th>GitLab Token</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="skill-name">/troubleshoot (core)</td>
+              <td class="cell-req">✅</td>
+              <td class="cell-req">✅</td>
+              <td class="cell-opt">⚡</td>
+              <td class="cell-opt">⚡</td>
+              <td class="cell-opt">⚡</td>
+              <td class="cell-opt">⚡</td>
+              <td class="cell-no">—</td>
+              <td class="cell-no">—</td>
+              <td class="cell-opt">⚡</td>
+            </tr>
+            <tr>
+              <td class="skill-name">/troubleshoot + platform skills</td>
+              <td class="cell-req">✅</td>
+              <td class="cell-req">✅</td>
+              <td class="cell-opt">⚡</td>
+              <td class="cell-opt">⚡</td>
+              <td class="cell-opt">⚡</td>
+              <td class="cell-opt">⚡</td>
+              <td class="cell-no">—</td>
+              <td class="cell-no">—</td>
+              <td class="cell-req">✅</td>
+            </tr>
+            <tr>
+              <td class="skill-name">/themis-aws-deploy</td>
+              <td class="cell-no">—</td>
+              <td class="cell-no">—</td>
+              <td class="cell-req">✅</td>
+              <td class="cell-no">—</td>
+              <td class="cell-no">—</td>
+              <td class="cell-req">✅</td>
+              <td class="cell-no">—</td>
+              <td class="cell-req">✅</td>
+              <td class="cell-req">✅</td>
+            </tr>
+            <tr>
+              <td class="skill-name">/perflab</td>
+              <td class="cell-no">—</td>
+              <td class="cell-no">—</td>
+              <td class="cell-req">✅</td>
+              <td class="cell-no">—</td>
+              <td class="cell-no">—</td>
+              <td class="cell-no">—</td>
+              <td class="cell-req">✅</td>
+              <td class="cell-no">—</td>
+              <td class="cell-no">—</td>
+            </tr>
+            <tr>
+              <td class="skill-name">/mongodb /redis /prometheus etc.</td>
+              <td class="cell-no">—</td>
+              <td class="cell-no">—</td>
+              <td class="cell-req">✅</td>
+              <td class="cell-no">—</td>
+              <td class="cell-no">—</td>
+              <td class="cell-no">—</td>
+              <td class="cell-req">✅</td>
+              <td class="cell-no">—</td>
+              <td class="cell-req">✅</td>
+            </tr>
+            <tr>
+              <td class="skill-name">/contribute</td>
+              <td class="cell-no">—</td>
+              <td class="cell-req">✅</td>
+              <td class="cell-no">—</td>
+              <td class="cell-no">—</td>
+              <td class="cell-no">—</td>
+              <td class="cell-no">—</td>
+              <td class="cell-no">—</td>
+              <td class="cell-no">—</td>
+              <td class="cell-no">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="info-box" style="margin-top:16px;">
+        <strong>GitLab Token note:</strong> GITLAB_TOKEN is needed to <em>sync/update</em> platform skills from the private GitLab repo. If platform skills are already synced on disk, the staleness check is <strong>non-blocking</strong> — it logs "staleness unknown, proceeding with existing copy" and continues. Basic <code>/troubleshoot</code> sessions (adapters, workflows, jobs, logs, infra) work without it. It's required when syncing from upstream.
+      </div>
+    </div>
+
+    <!-- Section 2: One-Time Setup -->
+    <div class="section">
+      <div class="section-label">One-Time Setup</div>
+      <h2 class="section-heading">One-Time Setup</h2>
+      <div class="prereq-setup-grid">
+
+        <div class="prereq-setup-card">
+          <div class="prereq-setup-icon">🖥️</div>
+          <div>
+            <div class="prereq-setup-title">Claude Code</div>
+            <div class="prereq-setup-desc">Install from <code>claude.ai/code</code>. CLAUDE.md auto-loads on launch — no manual setup needed.</div>
+          </div>
+        </div>
+
+        <div class="prereq-setup-card">
+          <div class="prereq-setup-icon">🎫</div>
+          <div>
+            <div class="prereq-setup-title">Jira API Token</div>
+            <div class="prereq-setup-desc"><code>id.atlassian.net → Security → API tokens</code><br/>Add to <code>.env</code> as <code>JIRA_API_TOKEN</code>. The Jira account must have permission to view and comment on ISD/ENG/IPSO tickets.</div>
+          </div>
+        </div>
+
+        <div class="prereq-setup-card">
+          <div class="prereq-setup-icon">📦</div>
+          <div>
+            <div class="prereq-setup-title">JFrog Identity Token</div>
+            <div class="prereq-setup-desc"><code>itential.jfrog.io → User Profile → Generate Identity Token</code><br/>Add as <code>JFROG_TOKEN</code>. Used by RPM downloads and auto-populates Themis <code>repository_api_key</code>.</div>
+          </div>
+        </div>
+
+        <div class="prereq-setup-card">
+          <div class="prereq-setup-icon">🔑</div>
+          <div>
+            <div class="prereq-setup-title">GitLab Deploy Token</div>
+            <div class="prereq-setup-desc">GitLab → <code>platform-claude-skills</code> → Settings → Repository → Deploy tokens. Scope: <code>read_repository</code>. Add as <code>GITLAB_TOKEN</code> in <code>.env</code>.</div>
+          </div>
+        </div>
+
+        <div class="prereq-setup-card">
+          <div class="prereq-setup-icon">☁️</div>
+          <div>
+            <div class="prereq-setup-title">AWS SSO Profile</div>
+            <div class="prereq-setup-desc">Default: <code>pe-team-sbx</code> (pre-configured). Custom account: add AWS overrides to <code>.env</code> — see Admin Guide → Environment Build Setup.</div>
+          </div>
+        </div>
+
+        <div class="prereq-setup-card">
+          <div class="prereq-setup-icon">🗝️</div>
+          <div>
+            <div class="prereq-setup-title">SSH Key(s)</div>
+            <div class="prereq-setup-desc">EC2 key pair from team lead (<code>chmod 400</code> required). PE infra key: <code>~/.ssh/claude_perflab</code>. Path goes in <code>.env</code> as <code>SSH_KEY_PATH_N</code> or in <code>run-vars.yml</code> as <code>ssh_key_path</code>.</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Themis first-time setup -->
+      <div class="info-box" style="margin-top:20px;">
+        <strong>Themis first-time setup:</strong> <code>run-vars.yml</code> is gitignored. Copy the template and fill in your values:<br/>
+        <code style="display:block;margin-top:6px;font-size:12px;">cp .claude/skills/themis-aws-deploy/run-vars.yml.example .claude/skills/themis-aws-deploy/run-vars.yml</code>
+        Leave <code>repository_api_key</code> blank — auto-populated from <code>JFROG_TOKEN</code> in <code>.env</code>. See <button onclick="showTab('admin')" style="background:none;border:none;color:var(--pink-soft);cursor:pointer;text-decoration:underline;font-size:12px;padding:0;">Admin Guide → Environment Build Setup</button> for the full field reference.
+      </div>
+
+      <!-- Required tools -->
+      <div style="margin-top:24px;">
+        <h3 style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;">Required Tools (Themis only)</h3>
+        <table class="prereq-iam-table">
+          <thead><tr><th>Tool</th><th>Min Version</th><th>Install</th></tr></thead>
+          <tbody>
+            <tr><td>OpenTofu</td><td>≥ 1.6</td><td>opentofu.org</td></tr>
+            <tr><td>Ansible</td><td>≥ 2.13</td><td><code>pip install ansible</code></td></tr>
+            <tr><td>Python</td><td>≥ 3.8</td><td>python.org</td></tr>
+            <tr><td>AWS CLI</td><td>v2</td><td>aws.amazon.com/cli</td></tr>
+            <tr><td>gh CLI</td><td>any</td><td>cli.github.com</td></tr>
+            <tr><td>Ansible Collections</td><td>—</td><td><code>ansible-galaxy collection install itential.deployer itential.tls community.crypto</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Section 3: Per-Skill Requirements -->
+    <div class="section">
+      <div class="section-label">Per-Skill Access</div>
+      <h2 class="section-heading">Per-Skill Minimum Access</h2>
+      <div class="prereq-skill-grid">
+
+        <div class="prereq-skill-card pink">
+          <div class="prereq-skill-title">Troubleshooting Skills</div>
+          <div class="prereq-skill-row"><span class="dot">●</span><span><strong>Required:</strong> IAP URL + credentials, Jira API token</span></div>
+          <div class="prereq-skill-row"><span class="dot">●</span><span><strong>Optional tier 1:</strong> SSH key(s) → enables OS-level log collection and infra checks</span></div>
+          <div class="prereq-skill-row"><span class="dot">●</span><span><strong>Optional tier 2:</strong> MONGO_URL, REDIS_HOST → deep DB diagnostics</span></div>
+          <div class="prereq-skill-row"><span class="dot">●</span><span><strong>Optional tier 3:</strong> AWS keys, Prometheus URL → CloudWatch and metrics analysis</span></div>
+          <div class="prereq-skill-row"><span class="dot">●</span><span><strong>Platform skills:</strong> GitLab Deploy Token for sync; Vault token for PE infra ops skills</span></div>
+        </div>
+
+        <div class="prereq-skill-card purple">
+          <div class="prereq-skill-title">/themis-aws-deploy</div>
+          <div class="prereq-skill-row"><span class="dot">●</span><span><strong>AWS profile</strong> with EC2 CRUD permissions (see AWS IAM section)</span></div>
+          <div class="prereq-skill-row"><span class="dot">●</span><span><strong>SSH private key</strong> for EC2 instances (<code>chmod 400</code>)</span></div>
+          <div class="prereq-skill-row"><span class="dot">●</span><span><strong>JFrog Identity Token</strong> — pulls platform RPMs via repository_api_key</span></div>
+          <div class="prereq-skill-row"><span class="dot">●</span><span><strong>GitLab Deploy Token</strong> — syncs <code>itential.tls</code> Ansible collection</span></div>
+          <div class="prereq-skill-row"><span class="dot">●</span><span><strong>3 local git checkouts:</strong> themis, itential.deployer, itential.tls</span></div>
+        </div>
+
+        <div class="prereq-skill-card blue">
+          <div class="prereq-skill-title">Operational Platform Skills</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;font-family:'JetBrains Mono',monospace;">/mongodb /redis /prometheus /itential-platform /itential-gateway</div>
+          <div class="prereq-skill-row"><span class="dot">●</span><span><strong>SSH key</strong> at <code>~/.ssh/claude_perflab</code> (team-provisioned)</span></div>
+          <div class="prereq-skill-row"><span class="dot">●</span><span><strong>Vault token</strong> in <code>vault-env.sh</code> (HashiCorp Vault)</span></div>
+          <div class="prereq-skill-row"><span class="dot">●</span><span><strong><code>environments/&lt;env&gt;/CLAUDE.md</code></strong> per target cluster</span></div>
+          <div class="prereq-skill-row"><span class="dot">●</span><span>PE-managed infrastructure only — not for arbitrary customer environments</span></div>
+        </div>
+
+        <div class="prereq-skill-card olive">
+          <div class="prereq-skill-title">Builder &amp; Contribute Skills</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;font-family:'JetBrains Mono',monospace;">/builder-agent /qa-agent /contribute</div>
+          <div class="prereq-skill-row"><span class="dot">●</span><span>Same IAP credentials as troubleshooting skills</span></div>
+          <div class="prereq-skill-row"><span class="dot">●</span><span><strong>Jira API token</strong> for <code>/contribute</code> PR filing and ticket comments</span></div>
+          <div class="prereq-skill-row"><span class="dot">●</span><span>All write operations (PUT/POST, Jira comments, GitHub PRs) require explicit engineer approval per action</span></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Section 4: IAP Role Requirements -->
+    <div class="section">
+      <div class="section-label">IAP Roles</div>
+      <h2 class="section-heading">IAP Application Role Requirements</h2>
+      <table class="prereq-iam-table">
+        <thead>
+          <tr>
+            <th>Capability</th>
+            <th>Minimum IAP Role</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Read adapter settings, job history, application health</td>
+            <td>Read-only / Viewer</td>
+          </tr>
+          <tr>
+            <td>POST to Automation Studio (import workflow fixes)</td>
+            <td>Platform Admin or Studio role</td>
+          </tr>
+          <tr>
+            <td>Restart adapters / applications</td>
+            <td>Platform Admin</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="info-box" style="margin-top:14px;">
+        The troubleshooting orchestrator is <strong>read-only by default</strong>. Write operations (restart, import, settings update) are gated by explicit engineer approval per action and require Platform Admin on the target IAP instance.
+      </div>
+    </div>
+
+    <!-- Section 5: AWS IAM -->
+    <div class="section">
+      <div class="section-label">AWS IAM</div>
+      <h2 class="section-heading">AWS IAM Requirements (Themis)</h2>
+      <p style="font-size:12.5px;color:var(--muted);margin-bottom:16px;">For <strong>pe-team-sbx</strong>, the IAM role is pre-configured — no action needed. For custom AWS accounts, the profile must allow these actions:</p>
+      <table class="prereq-iam-table">
+        <thead>
+          <tr><th>AWS Action</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>sts:GetCallerIdentity</td><td>Pre-flight identity check</td></tr>
+          <tr><td>ec2:RunInstances</td><td>Launch EC2 instances (up to 18 for ASA architecture)</td></tr>
+          <tr><td>ec2:TerminateInstances</td><td>Destroy instances after testing</td></tr>
+          <tr><td>ec2:DescribeInstances</td><td>Orphan detection and status polling</td></tr>
+          <tr><td>ec2:DescribeKeyPairs</td><td>Pre-flight key pair verification</td></tr>
+          <tr><td>ec2:DescribeSecurityGroups</td><td>Pre-flight SG verification</td></tr>
+          <tr><td>ec2:DescribeSubnets</td><td>Subnet mapping for OpenTofu</td></tr>
+          <tr><td>ec2:CreateTags</td><td>Tag instances with <code>owner</code> variable</td></tr>
+          <tr><td>VPC read actions</td><td>Subnet and SG lookups by Terraform VPC resources</td></tr>
+        </tbody>
+      </table>
+      <div class="warning" style="margin-top:14px;">
+        <strong>Custom accounts:</strong> The full IAM policy is defined in the Themis repo's terraform configuration. Request it from the platform-engineering team or derive it from <code>themis_root/vms/aws/*.tf</code>. For pe-team-sbx the role is already provisioned.
+      </div>
+    </div>
+
+    <!-- Section 6: OS Access -->
+    <div class="section">
+      <div class="section-label">OS Access</div>
+      <h2 class="section-heading">OS &amp; Infrastructure Access</h2>
+      <table class="prereq-os-table">
+        <thead>
+          <tr><th>Skill</th><th>OS User</th><th>Sudo Level</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>/troubleshoot-infra (SSH)</td>
+            <td>Customer-provided (<code>SSH_USER_N</code>)</td>
+            <td>None required</td>
+            <td><code>sudo tail</code> may be needed for root-owned log files</td>
+          </tr>
+          <tr>
+            <td>/themis-aws-deploy</td>
+            <td><code>rocky</code> (Rocky Linux 9 on EC2)</td>
+            <td>Full sudo via Ansible deployer</td>
+            <td>SSH user = <code>rocky</code>; <code>become</code> method governed by <code>itential.deployer</code> collection roles</td>
+          </tr>
+          <tr>
+            <td>/perflab</td>
+            <td><code>claude</code> (PE infra hosts)</td>
+            <td><code>NOPASSWD: ALL</code> via <code>/etc/sudoers.d/claude</code></td>
+            <td>Team-provisioned automation user; <code>pet-user</code> used as Ansible remote user on pe-ansible</td>
+          </tr>
+          <tr>
+            <td>/mongodb /redis /prometheus etc.</td>
+            <td><code>claude</code> or team SSH user</td>
+            <td>Varies per host</td>
+            <td>Vault credentials queried via SSH hop to pe-hashivault (172.85.0.30)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Section 7: Pre-Run Checklist -->
+    <div class="section">
+      <div class="section-label">Pre-Run Checklist</div>
+      <h2 class="section-heading">Themis Pre-Run Decision Checklist</h2>
+      <div class="prereq-checklist">
+        <div class="prereq-check-item"><div class="prereq-check-box"></div><span>AWS identity confirmed (<code>aws sts get-caller-identity</code>) and key pair + SG exist in the account (or <code>.env</code> overrides set)</span></div>
+        <div class="prereq-check-item"><div class="prereq-check-box"></div><span><code>itential.tls</code> cloned; <code>tls_repo</code> in <code>run-vars.yml</code> points at it</span></div>
+        <div class="prereq-check-item"><div class="prereq-check-box"></div><span><code>repository_password</code> filled in <code>run-vars.yml</code> OR <code>JFROG_TOKEN</code> in <code>.env</code> for auto-populate</span></div>
+        <div class="prereq-check-item"><div class="prereq-check-box"></div><span>Platform version decided — use Themis default or set both <code>platform_release</code> + <code>platform_packages</code> in <code>run-vars.yml</code></span></div>
+        <div class="prereq-check-item"><div class="prereq-check-box"></div><span>Gateway decision — <code>gateway_release</code> commented out (skip) OR set + <code>.whl</code> on disk / <code>JFROG_TOKEN</code> present</span></div>
+        <div class="prereq-check-item"><div class="prereq-check-box"></div><span>Required run-vars filled: <code>architecture</code>, <code>os</code>, <code>themis_root</code>, <code>owner</code>, <code>deployer_repo</code>, <code>tls_repo</code>, <code>aws_profile</code>, <code>ssh_key_path</code></span></div>
+        <div class="prereq-check-item"><div class="prereq-check-box"></div><span>Cost acknowledged — know how many VMs will be created and have a destroy plan ready</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <div id="tab-user" class="tab-content">
 
   <!-- Quick Start -->
@@ -826,7 +2001,7 @@ flowchart TD
     <p class="desc">Five steps to go from zero to your first investigation. Each step is a one-time setup — after that, every session is just <span class="inline-code">/troubleshoot ISD-XXXX</span>.</p>
 
     <!-- Prerequisites -->
-    <h3 style="margin-top:20px; margin-bottom:10px;">Prerequisites</h3>
+    <h3 style="margin-top:20px; margin-bottom:10px;">Prerequisites — Troubleshooting &amp; Investigation</h3>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Requirement</th><th>Version</th><th>How to get it</th></tr></thead>
@@ -841,6 +2016,26 @@ flowchart TD
       </table>
     </div>
     <div class="note" style="margin-top:10px;"><strong>Docker is not required</strong> to investigate live environments. It is only needed for Phase 3 local reproduction environments — and only when you specifically want to reproduce an issue locally rather than in the customer environment.</div>
+
+    <h3 style="margin-top:28px; margin-bottom:10px;">Prerequisites — Building a Reproduction Environment <span style="font-size:11px;font-weight:500;color:var(--muted);margin-left:8px;">(Themis / AWS deploy only)</span></h3>
+    <p style="margin:0 0 10px;color:var(--muted);">Only required when provisioning AWS VMs and deploying IAP via the <span class="inline-code">/themis-aws-deploy</span> skill. You do not need any of these to run <span class="inline-code">/troubleshoot</span>.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Requirement</th><th>Version</th><th>How to get it</th></tr></thead>
+        <tbody>
+          <tr><td><strong>OpenTofu</strong> (or Terraform)</td><td>1.6+</td><td><code>tofu version</code> to check; install from <a href="https://opentofu.org/docs/intro/install/" style="color:#f26bac">opentofu.org</a>. <code>terraform</code> works as a fallback — commands are identical.</td></tr>
+          <tr><td><strong>Ansible</strong></td><td>2.13+</td><td><code>ansible --version</code> to check; <code>pip install ansible</code> to install</td></tr>
+          <tr><td><strong>Python 3</strong></td><td>3.8+</td><td><code>python3 --version</code> to check; install via system package manager or <a href="https://python.org" style="color:#f26bac">python.org</a></td></tr>
+          <tr><td><strong>AWS CLI + profile</strong></td><td>v2</td><td><code>aws sts get-caller-identity --profile pe-team-sbx</code> to check. If expired: <code>aws sso login --profile pe-team-sbx</code>. Profile must be in <code>~/.aws/config</code>.</td></tr>
+          <tr><td><strong>SSH key (EC2 access)</strong></td><td>—</td><td>Obtain <code>pet-east1.open.pem</code> from your team. Place in <code>~/.ssh/</code> and <code>chmod 400 ~/.ssh/pet-east1.open.pem</code>. Without this, Ansible cannot connect to provisioned instances.</td></tr>
+          <tr><td><strong>Themis repo checkout</strong></td><td>—</td><td><code>git clone git@gitlab.com:itential/platform-engineering/themis.git</code>. Set <code>themis_root</code> in <code>run-vars.yml</code>. Verify with: <code>[ -f &lt;path&gt;/scripts/generate_inventory.py ] &amp;&amp; echo OK</code></td></tr>
+          <tr><td><strong>itential.deployer checkout</strong></td><td>—</td><td><code>git clone git@github.com:itential/itential.deployer.git</code>. Set <code>deployer_repo</code> in <code>run-vars.yml</code>. Verify with: <code>[ -d &lt;path&gt;/roles/platform ] &amp;&amp; echo OK</code></td></tr>
+          <tr><td><strong>itential.tls checkout</strong></td><td>—</td><td><code>git clone git@gitlab.com:itential/platform-engineering/ansible/collections/itential.tls.git</code>. Set <code>tls_repo</code> in <code>run-vars.yml</code>. Verify with: <code>[ -f &lt;path&gt;/playbooks/gen_ca_cert.yml ] &amp;&amp; echo OK</code></td></tr>
+          <tr><td><strong>JFROG_TOKEN</strong></td><td>—</td><td>Generate at <code>itential.jfrog.io → User Profile → Generate Identity Token</code>. Needed only if supplying RPM URLs (rather than Themis's pinned defaults) — verify with <code>scripts/pull-platform-rpms.sh --check</code>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="danger" style="margin-top:12px;"><strong>Verify repo paths before provisioning.</strong> A bad <code>deployer_repo</code> or <code>tls_repo</code> path does not fail immediately — the symlink succeeds even when dangling. The first failure surfaces only at Step 5 (Ansible deploy), after AWS instances are already provisioned and running. Always run the path-verify checks above before invoking <code>/themis-aws-deploy</code>.</div>
 
     <!-- Step 1: Install Claude Code -->
     <h3 style="margin-top:28px; margin-bottom:10px;"><span style="color:#ec1e7f">Step 1</span> — Install Claude Code</h3>
@@ -874,8 +2069,19 @@ flowchart TD
 <span class="key">JIRA_URL</span>=<span class="val">https://itential.atlassian.net</span>
 <span class="key">JIRA_USER</span>=<span class="val">you@itential.com</span>
 <span class="key">JIRA_API_TOKEN</span>=<span class="val">your-token</span>     <span class="comment"># id.atlassian.com → Profile → Security → API tokens</span>
-<span class="key">JIRA_PROJECTS</span>=<span class="val">ENG,ISD</span></pre></div>
+<span class="key">JIRA_PROJECTS</span>=<span class="val">ENG,ISD</span>
+
+<span class="section-hdr"># ── Platform Skills — operational skill library (private GitLab) ──</span>
+<span class="key">GITLAB_TOKEN</span>=<span class="val">your-deploy-token</span>  <span class="comment"># GitLab Deploy Token with read_repository scope</span>
+                              <span class="comment"># Create: platform-claude-skills → Settings → Repository → Deploy tokens</span>
+                              <span class="comment"># Then run: scripts/sync-platform-skills.sh</span>
+<span class="section-hdr"># ── JFrog — platform RPM downloads ───────────────────────────────</span>
+<span class="key">JFROG_TOKEN</span>=<span class="val">your-identity-token</span> <span class="comment"># JFrog Identity Token (per-engineer, not shared)</span>
+                              <span class="comment"># Generate: itential.jfrog.io → User Profile → Generate Identity Token</span>
+                              <span class="comment"># Then run: scripts/pull-platform-rpms.sh --version {IAP_VERSION}</span></pre></div>
     <div class="note" style="margin-top:8px;">The agent will tell you which optional variables unlock deeper diagnostics (MongoDB, Redis, SSH, Kubernetes, IAG, Slack) — see the Admin Guide for the full reference. Start with the minimum and add as needed.</div>
+    <div class="note" style="margin-top:8px;border-color:var(--orange);"><strong>Platform Skills (optional but recommended):</strong> Adding <span class="inline-code">GITLAB_TOKEN</span> and running <span class="inline-code">scripts/sync-platform-skills.sh</span> unlocks five deep-diagnostic skills: <span class="inline-code">/mongodb</span> (scored life report), <span class="inline-code">/redis</span> (scored life report), <span class="inline-code">/prometheus</span> (PromQL metrics), <span class="inline-code">/itential-platform</span> (IAP admin), and <span class="inline-code">/itential-gateway</span> (IAG admin). Ask your team lead for the Deploy Token value.</div>
+    <div class="note" style="margin-top:8px;border-color:#3d9be8;"><strong>JFrog RPMs (optional — VM / bare-metal reproduction):</strong> Adding <span class="inline-code">JFROG_TOKEN</span> enables <span class="inline-code">scripts/pull-platform-rpms.sh</span> to download platform RPMs for VM-based reproduction environments or to feed the Ansible deployer. Generate your own token at <span class="inline-code">itential.jfrog.io → User Profile → Generate Identity Token</span>.</div>
 
     <!-- Step 5: Run -->
     <h3 style="margin-top:24px; margin-bottom:10px;"><span style="color:#ec1e7f">Step 5</span> — Run Your First Investigation</h3>
@@ -902,6 +2108,83 @@ flowchart TD
     </div>
 
     <div class="warning" style="margin-top:20px;"><strong>Priority Mismatch Detection:</strong> If the agent detects that a low-priority ticket (P3/P4) contains language indicating a production outage, blocked team, or time-critical deadline — it escalates to senior management <em>before</em> investigation begins (Phase 1 Step 1f), not after. This is intentional and by design.</div>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- Building a Reproduction Environment -->
+  <div class="section">
+    <div class="section-label">Reproduction Environments</div>
+    <h2>Building a Reproduction Environment</h2>
+    <p class="desc">When Phase 3 requires a full environment to reproduce an issue — not just Docker — the <span class="inline-code">/themis-aws-deploy</span> skill provisions AWS EC2 instances and runs the complete Ansible deployer pipeline end-to-end. Invoke it once <span class="inline-code">run-vars.yml</span> is filled in; the rest is autonomous.</p>
+
+    <h3 style="margin-top:20px;color:var(--pink-soft);">Step 1 — Choose your architecture</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Architecture</th><th>VMs</th><th>Stack</th><th>Use case</th><th>Est. time</th></tr></thead>
+        <tbody>
+          <tr><td><code>aio</code></td><td>1</td><td>Redis + MongoDB + Platform on one host</td><td>POC / quick dev repro / feature testing</td><td>~45–70 min</td></tr>
+          <tr><td><code>minimal</code></td><td>4</td><td>Dedicated Redis, MongoDB, Platform, Gateway</td><td>Small-scale repro without HA complexity</td><td>~57 min</td></tr>
+          <tr><td><code>ha2</code></td><td>9</td><td>Redis Sentinel (×3), MongoDB ReplicaSet (×3), Platform (×2), Gateway</td><td>HA repro — most common for production issues</td><td>~44 min</td></tr>
+          <tr><td><code>asa</code></td><td>17</td><td>Dual-site Active/Standby — redis01–06, mongo01–05, platform01–04, gateway01–02</td><td>Multi-site failover or geo-redundancy issues</td><td>~68 min</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note" style="margin-top:8px;">Gateway VMs are included in all four architectures' base Themis tfvars. The <code>aio</code> design colocates the gateway on the single host (no extra VM). Gateway is only <em>deployed</em> when <code>gateway_release</code> is set in <code>run-vars.yml</code>.</div>
+
+    <h3 style="margin-top:24px;color:var(--pink-soft);">Step 2 — Configure run-vars.yml</h3>
+    <p style="margin:0 0 10px;">Open <span class="inline-code">.claude/skills/themis-aws-deploy/run-vars.yml</span> and fill in the required fields. All fields are commented by default — uncomment what you need.</p>
+    <div class="code-block"><pre><span class="comment"># ── Required — must set before invoking /themis-aws-deploy ───</span>
+<span class="key">architecture</span>: <span class="val">ha2</span>                  <span class="comment"># aio | minimal | ha2 | asa</span>
+<span class="key">os</span>: <span class="val">rocky9</span>                        <span class="comment"># rocky8 | rocky9 | rhel8 | rhel9 | al2023 | oracle9</span>
+<span class="key">themis_root</span>: <span class="val">/path/to/themis</span>      <span class="comment"># absolute path to Themis repo checkout</span>
+<span class="key">owner</span>: <span class="val">your-name</span>                  <span class="comment"># AWS resource tag — used in tofu -var owner=</span>
+<span class="key">deployer_repo</span>: <span class="val">/path/to/itential.deployer</span>
+<span class="key">tls_repo</span>: <span class="val">/path/to/itential.tls</span>
+<span class="key">aws_profile</span>: <span class="val">pe-team-sbx</span>         <span class="comment"># AWS CLI profile for EC2 provisioning</span>
+<span class="key">ssh_key_path</span>: <span class="val">~/.ssh/pet-east1.open.pem</span>
+
+<span class="comment"># ── Credentials ───────────────────────────────────────────────</span>
+<span class="key">repository_username</span>: <span class="val">""</span>           <span class="comment"># leave blank — JFrog token auth</span>
+<span class="key">repository_password</span>: <span class="val">""</span>           <span class="comment"># paste JFROG_TOKEN value here</span>
+
+<span class="comment"># ── Scope (default: deploy + certify everything) ──────────────</span>
+<span class="key">deployment_scope</span>: <span class="val">full</span>            <span class="comment"># full | redis | mongodb | platform | gateway | none</span>
+<span class="key">certify_scope</span>: <span class="val">full</span>              <span class="comment"># full | redis | mongodb | platform | none</span>
+
+<span class="comment"># ── Platform release (optional — overrides Themis defaults) ──</span>
+<span class="comment"># platform_release: 6</span>
+<span class="comment"># platform_packages:</span>
+<span class="comment">#   - https://itential.jfrog.io/artifactory/PLATFORM/…/itential-platform-6.4.0-1.noarch.rpm</span>
+<span class="comment">#   # Run: scripts/pull-platform-rpms.sh --version 6.4.0 --list  (to discover paths)</span>
+
+<span class="comment"># ── Gateway (optional) ─────────────────────────────────────────</span>
+<span class="comment"># gateway_release: "4.4"</span>
+<span class="comment"># gateway_whl_file: automation_gateway-4.4.46-py3-none-any.whl</span></pre></div>
+
+    <h3 style="margin-top:24px;color:var(--pink-soft);">Step 3 — Invoke the skill</h3>
+    <div class="code-block"><pre><span class="cmd">/themis-aws-deploy</span></pre></div>
+    <p style="margin:8px 0 0;">Claude reads <span class="inline-code">run-vars.yml</span>, runs pre-flight checks, then executes the full pipeline end-to-end without pausing: <strong>Provision → Wait for SSH → Inventory → TLS → Deploy → Certify</strong>. It only stops if a required field is missing or a deploy task fails.</p>
+
+    <h3 style="margin-top:24px;color:var(--pink-soft);">Step 4 — Review certify reports</h3>
+    <p style="margin:0 0 8px;">After the pipeline completes, Claude prints a per-component verdict (<strong>PASSED / FAILED / WARNING</strong>) and the full path to each certify report. Reports are also saved to:</p>
+    <div class="code-block"><pre>.claude/skills/themis-aws-deploy/artifacts/&lt;architecture&gt;/&lt;timestamp&gt;/reports/</pre></div>
+
+    <h3 style="margin-top:24px;color:var(--pink-soft);">Other operations</h3>
+    <div class="rules" style="grid-template-columns: 1fr;">
+      <div class="rule"><div class="rule-text"><strong>Deploy only (skip certify)</strong> — set <span class="inline-code">certify_scope: none</span> in <span class="inline-code">run-vars.yml</span> before invoking.</div></div>
+      <div class="rule"><div class="rule-text"><strong>Single component</strong> — set <span class="inline-code">deployment_scope: redis</span> (or <code>mongodb</code>, <code>platform</code>, <code>gateway</code>) to re-deploy just one component against an existing inventory.</div></div>
+      <div class="rule"><div class="rule-text"><strong>Re-certify only</strong> — set <span class="inline-code">deployment_scope: none</span>. Runs certify against the existing inventory without touching the running VMs.</div></div>
+      <div class="rule"><div class="rule-text"><strong>Tear down</strong> — ask Claude to run <span class="inline-code">tofu destroy</span> from the Themis repo. Always pass the same <span class="inline-code">owner</span> and tfvars that were used at apply time.</div></div>
+      <div class="rule"><div class="rule-text"><strong>Test all 4 architectures in parallel</strong> — Claude can use <span class="inline-code">scripts/test_all_environments.py</span> to provision and deploy all architectures simultaneously, each in its own AWS workspace. Useful for deployer release validation. See Admin Guide → Environment Build Setup for details.</div></div>
+    </div>
+
+    <div class="note" style="margin-top:16px;border-color:var(--c-blue-border);">
+      <strong>Inventory generation only?</strong> Use <span class="inline-code">/deployer-inventory</span> if you already have VMs and just need an <span class="inline-code">itential.deployer</span> Ansible inventory YAML. It supports all 4 topologies and the new <span class="inline-code">itential.iag5</span> gateway topology — no AWS provisioning required.<br><br>
+      <strong>/deployer-inventory prerequisites:</strong> Know your actual hostnames/IPs, the exact RPM filenames (use <code>scripts/pull-platform-rpms.sh --version X.Y.Z --list</code>), and generate two 64-char hex encryption keys before invoking:
+      <code style="display:block;margin-top:6px;">openssl rand -hex 32   # for gateway_secrets_encrypt_key</code>
+      <code style="display:block;margin-top:2px;">openssl rand -hex 32   # for platform_encryption_key</code>
+    </div>
   </div>
 
   <hr class="section-divider" />
@@ -960,7 +2243,33 @@ flowchart TD
       <div class="subskill">Phase 3i (inline)</div>
       <div class="what">Kafka adapter health, broker connectivity, consumer group lag, topic partition details</div>
     </div>
+    <div class="routing-row" style="border-left:3px solid var(--orange);">
+      <div class="symptom">MongoDB replica issue, pool saturation &gt;80%, elections detected</div>
+      <div class="subskill" style="color:var(--orange);">/mongodb <span style="font-size:10px;color:var(--muted);">(platform skill)</span></div>
+      <div class="what">Scored HEALTHY/DEGRADED/CRITICAL life report: topology, oplog window, slow ops, index gaps, disk</div>
+    </div>
+    <div class="routing-row" style="border-left:3px solid var(--orange);">
+      <div class="symptom">Redis eviction, sentinel issues, blocked_clients, memory &gt;80%</div>
+      <div class="subskill" style="color:var(--orange);">/redis <span style="font-size:10px;color:var(--muted);">(platform skill)</span></div>
+      <div class="what">Scored life report: sentinel topology, memory, keyspace hit ratio, slow log, persistence state</div>
+    </div>
+    <div class="routing-row" style="border-left:3px solid var(--orange);">
+      <div class="symptom">CPU spike, OOM, container restarts — need time-series analysis</div>
+      <div class="subskill" style="color:var(--orange);">/prometheus <span style="font-size:10px;color:var(--muted);">(platform skill)</span></div>
+      <div class="what">PromQL range queries scoped to incident window; firing alerts, CPU/heap/task-rate stat tables</div>
+    </div>
+    <div class="routing-row" style="border-left:3px solid var(--orange);">
+      <div class="symptom">IAP process health, adapter list, job worker control (deep admin)</div>
+      <div class="subskill" style="color:var(--orange);">/itential-platform <span style="font-size:10px;color:var(--muted);">(platform skill)</span></div>
+      <div class="what">Supplements /troubleshoot-jobs; reads IAP creds from .env; full admin view</div>
+    </div>
+    <div class="routing-row" style="border-left:3px solid var(--orange);">
+      <div class="symptom">IAG health, service list, etcd cluster state</div>
+      <div class="subskill" style="color:var(--orange);">/itential-gateway <span style="font-size:10px;color:var(--muted);">(platform skill)</span></div>
+      <div class="what">Supplements inline IAG diagnostics; reads IAG creds from .env</div>
+    </div>
   </div>
+  <div class="note" style="margin-top:4px;border-color:var(--orange);"><strong>Platform Skills</strong> (orange rows above) require <span class="inline-code">GITLAB_TOKEN</span> in <span class="inline-code">.env</span> and a one-time <span class="inline-code">scripts/sync-platform-skills.sh</span> run. See the Admin Guide → Vendor Sync for setup.</div>
 
   <hr class="section-divider" />
 
@@ -1747,7 +3056,22 @@ SSH_ROLE_1=iap</pre></div>
 <span class="section-hdr"># ── Kafka ─────────────────────────────────────────────────────</span>
 <span class="key">KAFKA_BOOTSTRAP</span>=<span class="val">localhost:9092</span>
 <span class="key">KAFKA_CONSUMER_GROUP</span>=<span class="val">iap-consumer-group</span>
-<span class="key">KAFKA_TOPIC</span>=<span class="val">iap-topic</span></pre></div>
+<span class="key">KAFKA_TOPIC</span>=<span class="val">iap-topic</span>
+
+<span class="section-hdr"># ── /themis-aws-deploy — VM Provisioning ─────────────────────</span>
+<span class="key">JFROG_TOKEN</span>=                     <span class="comment"># JFrog Identity Token — auto-populates repository_password + gateway .whl</span>
+                                   <span class="comment">#   Generate: itential.jfrog.io → User Profile → Generate Identity Token (per-engineer, not shared)</span>
+<span class="key">GITLAB_TOKEN</span>=                    <span class="comment"># GitLab Deploy Token — sync platform-skills (shared via 1Password/Vault)</span>
+<span class="key">AWS_KEY_NAME</span>=                    <span class="comment"># EC2 key pair name in target account (non-pe-team-sbx only)</span>
+<span class="key">AWS_SECURITY_GROUP_IDS</span>=          <span class="comment"># comma-separated SG IDs — SSH (22) inbound + self-referencing all-traffic rule</span>
+<span class="key">AWS_SUBNET_IDS</span>=                  <span class="comment"># 3 subnet IDs → public-1a/b/c aliases; all 3 required for every architecture</span>
+<span class="key">AWS_DEFAULT_SUBNET</span>=<span class="val">public-1a</span>    <span class="comment"># which alias used as default_subnet (default: public-1a)</span>
+<span class="key">AWS_INSTANCE_TYPE_PLATFORM</span>=      <span class="comment"># platform VM type (default: t3.medium)</span>
+<span class="key">AWS_INSTANCE_TYPE_REDIS</span>=         <span class="comment"># redis VM type (default: t3.medium)</span>
+<span class="key">AWS_INSTANCE_TYPE_MONGODB</span>=       <span class="comment"># mongodb VM type (default: t3.medium)</span>
+<span class="key">AWS_INSTANCE_TYPE_GATEWAY</span>=       <span class="comment"># gateway VM type (default: t3.medium)</span>
+                                   <span class="comment"># Note: AWS_REGION is shared with the EKS section above</span>
+<span class="comment"># DEPLOY_GATEWAY_TFVARS=true      # legacy Themis only — NEVER set for ASA architecture</span></pre></div>
 
     <div class="table-wrap" style="margin-top:20px;">
       <table>
@@ -1763,6 +3087,183 @@ SSH_ROLE_1=iap</pre></div>
           <tr><td><code>IAG_URL</code> + credentials</td><td><span class="pill pill-cond">Conditional</span></td><td>IAG direct health check, service list, job history — needed for IAG-related issues</td></tr>
           <tr><td><code>PROMETHEUS_URL</code></td><td><span class="pill pill-opt">Optional</span></td><td>WFE CPU, heap, event loop lag, GC overhead metrics — unlocks Phase 6 of /troubleshoot-jobs</td></tr>
           <tr><td><code>SLACK_ESCALATION_CHANNEL</code></td><td><span class="pill pill-opt">Optional</span></td><td>Manager escalation messages in Phase 7</td></tr>
+          <tr style="border-top:2px solid var(--pink);"><td><code>JFROG_TOKEN</code></td><td><span class="pill pill-cond">Conditional</span></td><td><strong>/themis-aws-deploy:</strong> auto-populates <code>repository_password</code> + pulls gateway .whl; also used by <code>/deployer-inventory</code></td></tr>
+          <tr><td><code>GITLAB_TOKEN</code></td><td><span class="pill pill-cond">Conditional</span></td><td><strong>/themis-aws-deploy:</strong> required to run <code>sync-platform-skills.sh</code>; not read at skill runtime</td></tr>
+          <tr><td><code>AWS_KEY_NAME</code> + <code>AWS_SECURITY_GROUP_IDS</code> + <code>AWS_SUBNET_IDS</code></td><td><span class="pill pill-cond">Conditional</span></td><td><strong>/themis-aws-deploy:</strong> required for non-pe-team-sbx accounts; converted to <code>auto-account.tfvars</code> at Step 1b</td></tr>
+          <tr><td><code>AWS_INSTANCE_TYPE_*</code></td><td><span class="pill pill-opt">Optional</span></td><td><strong>/themis-aws-deploy:</strong> per-role EC2 instance sizing overrides; defaults to <code>t3.medium</code> for all roles</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="margin-top:28px;color:var(--pink-soft);">Architecture Overrides — /themis-aws-deploy</h3>
+    <p style="margin:0 0 10px;">Your complete <span class="inline-code">.env</span> = <strong>all base keys above</strong> + the architecture block below. Copy the base, append the right architecture block, fill in your values, then set <span class="inline-code">architecture: &lt;arch&gt;</span> in <span class="inline-code">run-vars.yml</span>. Ready-made combined files also live in <span class="inline-code">sample-env/</span>.</p>
+
+    <div class="note" style="margin-bottom:14px;"><strong>pe-team-sbx engineers:</strong> Only <span class="inline-code">JFROG_TOKEN</span> and optionally <span class="inline-code">GITLAB_TOKEN</span> are needed on top of the base. Leave all <span class="inline-code">AWS_*</span> fields blank — Themis terraform.tfvars defaults (us-east-1, pe-team-sbx key pair and subnets) apply automatically.</div>
+
+    <style>
+      .arch-tabs { display:flex; gap:6px; margin-bottom:0; }
+      .arch-tab {
+        padding:6px 18px; border-radius:6px 6px 0 0; border:1px solid var(--border);
+        border-bottom:none; background:var(--surface); color:var(--muted);
+        cursor:pointer; font-size:13px; font-weight:600; letter-spacing:.04em;
+        font-family:monospace; transition:background .15s,color .15s;
+      }
+      .arch-tab:hover { background:var(--card); color:var(--text); }
+      .arch-tab.active { background:var(--card); color:var(--pink); border-color:var(--pink); }
+      .arch-pane { display:none; border:1px solid var(--border); border-radius:0 6px 6px 6px; padding:16px; background:var(--card); }
+      .arch-pane.active { display:block; }
+      .arch-pane pre { margin:0; font-size:12px; line-height:1.7; overflow-x:auto; white-space:pre; }
+      .env-required { color:#f59e0b; font-weight:600; }
+      .env-comment  { color:var(--muted); }
+      .env-key      { color:#7dd3fc; }
+      .env-val      { color:#86efac; }
+      .env-section  { color:var(--pink-soft); font-weight:700; }
+      .env-warn     { color:#f87171; font-weight:600; }
+    </style>
+
+    <div class="arch-tabs">
+      <button class="arch-tab active" onclick="showArch('aio',this)">aio — 1 VM</button>
+      <button class="arch-tab" onclick="showArch('minimal',this)">minimal — 4 VMs</button>
+      <button class="arch-tab" onclick="showArch('ha2',this)">ha2 — 9 VMs</button>
+      <button class="arch-tab" onclick="showArch('asa',this)">asa — 17 VMs</button>
+    </div>
+
+    <!-- AIO -->
+    <div id="arch-aio" class="arch-pane active">
+      <p style="margin:0 0 8px;font-size:13px;">
+        <strong>AIO — All-in-One</strong> &nbsp;·&nbsp; 1 VM (~45–70 min, ~$0.15/hr) &nbsp;·&nbsp;
+        IAP, IAG, MongoDB, Redis colocated on one instance. Best first test.
+      </p>
+      <p style="margin:0 0 10px;font-size:12px;color:var(--muted);">Add to your base <code>.env</code> &nbsp;|&nbsp; <code>run-vars.yml</code>: <code style="color:var(--pink-soft);">architecture: aio</code> &nbsp;|&nbsp; Full file: <code>sample-env/env.aio.example</code></p>
+      <pre><span class="env-comment"># ── Append to base .env above — AIO overrides ────────────────────────────────</span>
+
+<span class="env-comment"># JFrog + GitLab (Required)</span>
+<span class="env-key">JFROG_TOKEN</span>=<span class="env-val">&lt;your-jfrog-identity-token&gt;</span>     <span class="env-comment"># itential.jfrog.io → User Profile → Generate Identity Token</span>
+<span class="env-key">GITLAB_TOKEN</span>=<span class="env-val">&lt;deploy-token-value&gt;</span>           <span class="env-comment"># shared token — get from 1Password or Vault</span>
+
+<span class="env-comment"># AWS Account (leave all AWS_* blank for pe-team-sbx)</span>
+<span class="env-key">AWS_REGION</span>=<span class="env-val">us-east-1</span>
+<span class="env-key">AWS_KEY_NAME</span>=<span class="env-val">your-ec2-key-pair-name</span>
+<span class="env-key">AWS_SECURITY_GROUP_IDS</span>=<span class="env-val">sg-xxxxxxxxxxxx</span>        <span class="env-comment"># SSH (22) inbound; self-referencing all-traffic rule</span>
+<span class="env-key">AWS_SUBNET_IDS</span>=<span class="env-val">subnet-aaa111111,subnet-bbb222222,subnet-ccc333333</span>   <span class="env-comment"># all 3 required even though AIO uses only public-1a</span>
+<span class="env-key">AWS_DEFAULT_SUBNET</span>=<span class="env-val">public-1a</span>
+
+<span class="env-comment"># Sizing — AIO: all services on ONE VM; only PLATFORM type is used (others ignored)</span>
+<span class="env-key">AWS_INSTANCE_TYPE_PLATFORM</span>=<span class="env-val">t3.xlarge</span>         <span class="env-comment"># t3.xlarge — IAP + IAG + MongoDB + Redis compete for same CPU/RAM</span>
+<span class="env-comment"># AWS_INSTANCE_TYPE_REDIS=     # not used — no separate Redis VM in AIO</span>
+<span class="env-comment"># AWS_INSTANCE_TYPE_MONGODB=   # not used — no separate MongoDB VM in AIO</span>
+<span class="env-comment"># AWS_INSTANCE_TYPE_GATEWAY=   # not used — no separate Gateway VM in AIO</span></pre>
+    </div>
+
+    <!-- Minimal -->
+    <div id="arch-minimal" class="arch-pane">
+      <p style="margin:0 0 8px;font-size:13px;">
+        <strong>Minimal</strong> &nbsp;·&nbsp; 4 VMs (~57 min, ~$0.40/hr) &nbsp;·&nbsp;
+        Dedicated Redis, MongoDB, Platform, Gateway. First multi-VM test — validates inventory and inter-node connectivity.
+      </p>
+      <p style="margin:0 0 10px;font-size:12px;color:var(--muted);">Add to your base <code>.env</code> &nbsp;|&nbsp; <code>run-vars.yml</code>: <code style="color:var(--pink-soft);">architecture: minimal</code> &nbsp;|&nbsp; Full file: <code>sample-env/env.minimal.example</code></p>
+      <pre><span class="env-comment"># ── Append to base .env above — Minimal overrides ───────────────────────────</span>
+
+<span class="env-key">JFROG_TOKEN</span>=<span class="env-val">&lt;your-jfrog-identity-token&gt;</span>
+<span class="env-key">GITLAB_TOKEN</span>=<span class="env-val">&lt;deploy-token-value&gt;</span>
+
+<span class="env-comment"># AWS Account (leave all AWS_* blank for pe-team-sbx)</span>
+<span class="env-key">AWS_REGION</span>=<span class="env-val">us-east-1</span>
+<span class="env-key">AWS_KEY_NAME</span>=<span class="env-val">your-ec2-key-pair-name</span>
+<span class="env-key">AWS_SECURITY_GROUP_IDS</span>=<span class="env-val">sg-xxxxxxxxxxxx</span>        <span class="env-comment"># SSH (22) inbound; self-referencing all-traffic rule</span>
+<span class="env-key">AWS_SUBNET_IDS</span>=<span class="env-val">subnet-aaa111111,subnet-bbb222222,subnet-ccc333333</span>   <span class="env-comment"># Minimal places all VMs in public-1a; 3 IDs still required</span>
+<span class="env-key">AWS_DEFAULT_SUBNET</span>=<span class="env-val">public-1a</span>
+
+<span class="env-comment"># Sizing — 4 dedicated VMs, right-size each role independently</span>
+<span class="env-key">AWS_INSTANCE_TYPE_PLATFORM</span>=<span class="env-val">t3.large</span>          <span class="env-comment"># IAP Platform VM — needs RAM for Node.js workers</span>
+<span class="env-key">AWS_INSTANCE_TYPE_REDIS</span>=<span class="env-val">t3.medium</span>            <span class="env-comment"># Redis (standalone, no Sentinel in Minimal)</span>
+<span class="env-key">AWS_INSTANCE_TYPE_MONGODB</span>=<span class="env-val">t3.medium</span>          <span class="env-comment"># MongoDB (standalone, no ReplicaSet in Minimal)</span>
+<span class="env-key">AWS_INSTANCE_TYPE_GATEWAY</span>=<span class="env-val">t3.medium</span>          <span class="env-comment"># IAG Gateway</span></pre>
+    </div>
+
+    <!-- HA2 -->
+    <div id="arch-ha2" class="arch-pane">
+      <p style="margin:0 0 8px;font-size:13px;">
+        <strong>HA2 — High Availability</strong> &nbsp;·&nbsp; 9 VMs (~44 min, ~$0.90/hr) &nbsp;·&nbsp;
+        Redis Sentinel ×3, MongoDB ReplicaSet ×3, Platform ×2, Gateway ×1.
+      </p>
+      <div class="danger" style="margin:0 0 10px;padding:8px 12px;font-size:12px;"><strong>SG self-referencing all-traffic rule is MANDATORY.</strong> Without it, MongoDB elections fail (port 27017 blocked between VMs) and Redis Sentinel cluster won't form (port 26379). Create with: <code>aws ec2 authorize-security-group-ingress --group-id sg-xxx --protocol all --port -1 --source-group sg-xxx</code></div>
+      <p style="margin:0 0 10px;font-size:12px;color:var(--muted);">Add to your base <code>.env</code> &nbsp;|&nbsp; <code>run-vars.yml</code>: <code style="color:var(--pink-soft);">architecture: ha2</code> &nbsp;|&nbsp; Full file: <code>sample-env/env.ha2.example</code></p>
+      <pre><span class="env-comment"># ── Append to base .env above — HA2 overrides ───────────────────────────────</span>
+
+<span class="env-key">JFROG_TOKEN</span>=<span class="env-val">&lt;your-jfrog-identity-token&gt;</span>
+<span class="env-key">GITLAB_TOKEN</span>=<span class="env-val">&lt;deploy-token-value&gt;</span>
+
+<span class="env-comment"># AWS Account (leave all AWS_* blank for pe-team-sbx)</span>
+<span class="env-key">AWS_REGION</span>=<span class="env-val">us-east-1</span>
+<span class="env-key">AWS_KEY_NAME</span>=<span class="env-val">your-ec2-key-pair-name</span>
+<span class="env-comment"># SG MUST have self-referencing all-traffic rule — MongoDB RS (27017), Redis Sentinel (26379), IAP (3000)</span>
+<span class="env-key">AWS_SECURITY_GROUP_IDS</span>=<span class="env-val">sg-xxxxxxxxxxxx</span>
+<span class="env-comment"># Spread across 3 AZs for true HA resiliency (public-1a → AZ1, public-1b → AZ2, public-1c → AZ3)</span>
+<span class="env-key">AWS_SUBNET_IDS</span>=<span class="env-val">subnet-aaa111111,subnet-bbb222222,subnet-ccc333333</span>
+<span class="env-key">AWS_DEFAULT_SUBNET</span>=<span class="env-val">public-1a</span>
+
+<span class="env-comment"># Sizing — 9 VMs, production-capable</span>
+<span class="env-key">AWS_INSTANCE_TYPE_PLATFORM</span>=<span class="env-val">t3.large</span>          <span class="env-comment"># Platform ×2 (HA load balanced)</span>
+<span class="env-key">AWS_INSTANCE_TYPE_REDIS</span>=<span class="env-val">t3.medium</span>            <span class="env-comment"># Redis Sentinel ×3</span>
+<span class="env-key">AWS_INSTANCE_TYPE_MONGODB</span>=<span class="env-val">t3.medium</span>          <span class="env-comment"># MongoDB ReplicaSet ×3 (use t3.large for write-heavy workloads)</span>
+<span class="env-key">AWS_INSTANCE_TYPE_GATEWAY</span>=<span class="env-val">t3.medium</span>          <span class="env-comment"># IAG Gateway ×1</span>
+
+<span class="env-comment"># Post-build: redis-cli -h &lt;redis01&gt; sentinel masters   →  verify Sentinel master elected</span>
+<span class="env-comment"># Post-build: mongo --host &lt;mongo01&gt;:27017 --eval "rs.status()"  → verify PRIMARY elected</span></pre>
+    </div>
+
+    <!-- ASA -->
+    <div id="arch-asa" class="arch-pane">
+      <p style="margin:0 0 8px;font-size:13px;">
+        <strong>ASA — Active-Standby</strong> &nbsp;·&nbsp; 17 VMs (~68 min, ~$1.70/hr) &nbsp;·&nbsp;
+        Dual-site: <code>redis01–06</code>, <code>mongo01–05</code>, <code>platform01–04</code>, <code>gateway01–02</code> (flat naming — NOT dc1-/dc2-).
+      </p>
+      <div class="danger" style="margin:0 0 10px;padding:8px 12px;font-size:12px;"><strong>NEVER set DEPLOY_GATEWAY_TFVARS=true for ASA.</strong> The <code>asa-with-gateway.tfvars</code> uses OLD <code>dc1-/dc2-/dc3-</code> naming — applying it destroys running instances by replacing them with wrongly-named ones.</div>
+      <p style="margin:0 0 10px;font-size:12px;color:var(--muted);">Add to your base <code>.env</code> &nbsp;|&nbsp; <code>run-vars.yml</code>: <code style="color:var(--pink-soft);">architecture: asa</code> &nbsp;|&nbsp; Full file: <code>sample-env/env.asa.example</code></p>
+      <pre><span class="env-comment"># ── Append to base .env above — ASA overrides ───────────────────────────────</span>
+
+<span class="env-key">JFROG_TOKEN</span>=<span class="env-val">&lt;your-jfrog-identity-token&gt;</span>
+<span class="env-key">GITLAB_TOKEN</span>=<span class="env-val">&lt;deploy-token-value&gt;</span>
+
+<span class="env-comment"># AWS Account (leave all AWS_* blank for pe-team-sbx)</span>
+<span class="env-key">AWS_REGION</span>=<span class="env-val">us-east-1</span>
+<span class="env-key">AWS_KEY_NAME</span>=<span class="env-val">your-ec2-key-pair-name</span>
+<span class="env-comment"># SG MANDATORY: self-referencing all-traffic — cross-site replication (MongoDB 27017, Redis 6379/26379, etcd 2379/2380)</span>
+<span class="env-key">AWS_SECURITY_GROUP_IDS</span>=<span class="env-val">sg-xxxxxxxxxxxx</span>
+<span class="env-comment"># 3 subnets across AZs: primary site → public-1a/b, secondary site → public-1c</span>
+<span class="env-key">AWS_SUBNET_IDS</span>=<span class="env-val">subnet-aaa111111,subnet-bbb222222,subnet-ccc333333</span>
+<span class="env-key">AWS_DEFAULT_SUBNET</span>=<span class="env-val">public-1a</span>
+
+<span class="env-comment"># Sizing — 17 VMs, production-grade</span>
+<span class="env-key">AWS_INSTANCE_TYPE_PLATFORM</span>=<span class="env-val">t3.xlarge</span>         <span class="env-comment"># Platform ×4 (primary + secondary site, more traffic in ASA)</span>
+<span class="env-key">AWS_INSTANCE_TYPE_REDIS</span>=<span class="env-val">t3.medium</span>            <span class="env-comment"># Redis ×6 (3 per site)</span>
+<span class="env-key">AWS_INSTANCE_TYPE_MONGODB</span>=<span class="env-val">t3.large</span>           <span class="env-comment"># MongoDB ×5 (cross-site RS, more data volume)</span>
+<span class="env-key">AWS_INSTANCE_TYPE_GATEWAY</span>=<span class="env-val">t3.medium</span>          <span class="env-comment"># Gateway ×2 (gateway01 + gateway02)</span>
+
+<span class="env-warn"># DEPLOY_GATEWAY_TFVARS=true   # DO NOT UNCOMMENT FOR ASA — asa-with-gateway.tfvars uses OLD dc1-/dc2- naming</span>
+
+<span class="env-comment"># Post-build: tofu output -json | jq '.instances.value | keys'  → verify flat names (redis01–06, etc.)</span>
+<span class="env-comment"># Post-build: mongo --host &lt;mongo01&gt;:27017 --eval "rs.status()"  → verify all 5 RS members</span></pre>
+    </div>
+
+    <script>
+      function showArch(arch, btn) {
+        document.querySelectorAll('.arch-pane').forEach(function(p){ p.classList.remove('active'); });
+        document.querySelectorAll('.arch-tab').forEach(function(b){ b.classList.remove('active'); });
+        document.getElementById('arch-' + arch).classList.add('active');
+        btn.classList.add('active');
+      }
+    </script>
+
+    <div class="table-wrap" style="margin-top:20px;">
+      <table>
+        <thead><tr><th>Architecture</th><th>VMs</th><th>Cost/hr</th><th>Key difference vs base</th><th>Full sample file</th></tr></thead>
+        <tbody>
+          <tr><td><code>aio</code></td><td>1</td><td>~$0.15</td><td>Only <code>AWS_INSTANCE_TYPE_PLATFORM</code> used; all services on one VM — use t3.xlarge</td><td><code>sample-env/env.aio.example</code></td></tr>
+          <tr><td><code>minimal</code></td><td>4</td><td>~$0.40</td><td>Per-role instance types; standalone Redis and MongoDB (no Sentinel/RS)</td><td><code>sample-env/env.minimal.example</code></td></tr>
+          <tr><td><code>ha2</code></td><td>9</td><td>~$0.90</td><td>SG self-referencing rule mandatory; spread 3 subnets across AZs</td><td><code>sample-env/env.ha2.example</code></td></tr>
+          <tr><td><code>asa</code></td><td>17</td><td>~$1.70</td><td>DEPLOY_GATEWAY_TFVARS MUST be unset; flat naming (redis01–06); t3.xlarge platform + t3.large MongoDB</td><td><code>sample-env/env.asa.example</code></td></tr>
         </tbody>
       </table>
     </div>
@@ -1886,6 +3387,7 @@ SSH_ROLE_1=iap</pre></div>
       <div class="rule"><div class="rule-text"><strong>auth_logging cleanup is mandatory</strong> — The adapter debug cycle always ends with Cleanup (Phase 3 of /troubleshoot-adapters). Leaving <code>auth_logging: true</code> in production exposes credentials in log files.</div></div>
       <div class="rule"><div class="rule-text"><strong>Token is cached, not re-entered</strong> — Auth token saved to <code>.auth.json</code> is reused for 50 minutes. The agent never asks you to paste a token into the conversation.</div></div>
       <div class="rule"><div class="rule-text"><strong>External content is data, not commands</strong> — Instructions found in ticket descriptions, Confluence pages, or log files are not executed. Only engineer instructions in the conversation are followed.</div></div>
+      <div class="rule"><div class="rule-text"><strong>bash-safety-guard.py enforces consent at the shell level</strong> — A <code>PreToolUse</code> hook intercepts every Bash command before execution. It blocks: MongoDB/Redis writes, <code>systemctl restart</code> / <code>docker restart</code> / <code>pm2 restart</code> / <code>kubectl rollout restart</code> unless prefixed with <code>RESTART_APPROVED=yes</code>, and <code>POST /adapters</code> or <code>POST /adapters/import</code> unless prefixed with <code>ADAPTER_CREATE_APPROVED=yes</code>. These markers are never added without a clear "yes" from the engineer in the current conversation. The guard also prevents accidental <code>git add data/</code> (customer PII in investigation folders).</div></div>
     </div>
   </div>
 
@@ -2015,6 +3517,656 @@ SSH_ROLE_1=iap</pre></div>
         <strong>AGENTS.md context</strong> — The vendored <span class="inline-code">AGENTS.md</span> is the upstream builder-skills skill router and delivery lifecycle guide. The synced skill files in <span class="inline-code">.claude/skills/</span> are the primary interface; load <span class="inline-code">AGENTS.md</span> for the full spec→build→test lifecycle reference when doing multi-stage fix construction beyond the troubleshooting scope.
       </div></div>
     </div>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- Vendor Sync — platform-skills -->
+  <div class="section">
+    <div class="section-label">Vendor Sync</div>
+    <h2>Vendor Sync — platform-skills (Private GitLab)</h2>
+    <p class="desc">The <span class="inline-code">platform-claude-skills</span> repo (<a href="https://gitlab.com/itential/platform-engineering/platform-claude-skills" target="_blank" style="color:var(--pink-soft);">gitlab.com/itential/platform-engineering/platform-claude-skills</a>) provides five deep-diagnostic skills for MongoDB, Redis, Prometheus, IAP, and IAG. Because the repo is private, it requires a GitLab Deploy Token to sync.</p>
+
+    <h3 style="margin-top:20px;color:var(--pink-soft);">One-Time Authentication Setup</h3>
+    <ol style="margin:10px 0 16px 20px;color:var(--muted);line-height:1.9;font-size:14px;">
+      <li>Ask your team lead for the <strong>platform-claude-skills Deploy Token</strong> (read-only, <code>read_repository</code> scope). It is shared via 1Password or Vault — never Slack.</li>
+      <li>Add it to your repo <span class="inline-code">.env</span> file:
+        <pre style="margin:6px 0 10px;"><span class="key">GITLAB_TOKEN</span>=<span class="val">your-deploy-token-value</span></pre>
+      </li>
+      <li>Run the initial sync:
+        <pre style="margin:6px 0 10px;">bash scripts/sync-platform-skills.sh</pre>
+      </li>
+      <li>Review the diff and commit:
+        <pre style="margin:6px 0 10px;">git diff .claude/skills/
+git add vendor/platform-skills/ .claude/skills/mongodb/ .claude/skills/redis/ .claude/skills/prometheus/ .claude/skills/itential-platform/ .claude/skills/itential-gateway/
+git commit -m "chore: sync platform-skills from upstream"</pre>
+      </li>
+    </ol>
+
+    <h3 style="margin-top:20px;color:var(--pink-soft);">Creating a New Deploy Token (admins only)</h3>
+    <ol style="margin:10px 0 16px 20px;color:var(--muted);line-height:1.9;font-size:14px;">
+      <li>Go to <strong>platform-claude-skills → Settings → Repository → Deploy tokens</strong> on GitLab.</li>
+      <li>Create a token with name <code>troubleshooting-agent-readonly</code>, scope <strong>read_repository</strong> only. No expiry required for team tokens.</li>
+      <li>Distribute the token value securely (1Password or Vault) — not Slack or email.</li>
+    </ol>
+
+    <div class="rules" style="margin-top:16px;">
+      <div class="rule"><div class="rule-text">
+        <strong>Staleness is checked automatically</strong> — at the end of every Claude Code session the <span class="inline-code">check-platform-skills-staleness.py</span> Stop hook reads <span class="inline-code">vendor/platform-skills/SYNC_MANIFEST.json</span>, calls <span class="inline-code">git ls-remote</span> to compare with upstream <span class="inline-code">master</span>, and prints a staleness report if behind. Always exits 0 so it never blocks session completion.
+      </div></div>
+      <div class="rule"><div class="rule-text">
+        <strong>No commit count</strong> — unlike builder-skills (which uses the GitHub compare API for ahead-by count), platform-skills staleness reports show "out of date" with the two SHAs but no commit count. This avoids GitLab API auth complexity.
+      </div></div>
+      <div class="rule"><div class="rule-text">
+        <strong>Staleness check manually</strong> — run <span class="inline-code">scripts/sync-platform-skills.sh --check</span> at any time. Exits 0 (current), 1 (stale), or 2 (check failed — network/token issue, not an error that blocks work).
+      </div></div>
+      <div class="rule"><div class="rule-text">
+        <strong>Companion files co-locate with SKILL.md</strong> — unlike builder-skills (which puts JSON helpers in <span class="inline-code">vendor/builder-skills/helpers/</span>), platform-skills companion files (shell scripts, reference docs for MongoDB offline collection, etc.) land alongside their <span class="inline-code">SKILL.md</span> in <span class="inline-code">.claude/skills/&lt;name&gt;/</span>. They are tightly coupled to their skill.
+      </div></div>
+      <div class="rule"><div class="rule-text">
+        <strong>Never auto-commit the sync</strong> — always run <span class="inline-code">git diff .claude/skills/</span> after sync. Review for breaking changes (removed phases, renamed credential keys) before committing.
+      </div></div>
+      <div class="rule"><div class="rule-text">
+        <strong>Manifest location</strong> — <span class="inline-code">vendor/platform-skills/SYNC_MANIFEST.json</span> records <span class="inline-code">synced_commit</span>, <span class="inline-code">synced_commit_date</span>, and <span class="inline-code">synced_at</span>. The actual skill files live in <span class="inline-code">.claude/skills/</span>, not in the vendor directory.
+      </div></div>
+    </div>
+
+    <h3 style="margin-top:20px;color:var(--pink-soft);">Platform Skills Available After Sync</h3>
+    <p style="margin:0 0 8px;font-size:13px;color:var(--muted);">Note: <code>/mongodb</code>, <code>/redis</code>, <code>/itential-platform</code>, and <code>/itential-gateway</code> authenticate via HashiCorp Vault + <code>vault-env.sh</code>, not directly from <code>.env</code>. See the <strong>Platform Skills — Operational PE Environment Setup</strong> section below for the full credential model.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Skill</th><th>Invoke</th><th>Auth Model</th><th>When to Use</th></tr></thead>
+        <tbody>
+          <tr><td><strong>/mongodb</strong></td><td><code>/mongodb perflab</code></td><td>Vault — keys <code>mongoDbAdmin</code>, <code>mongoDb</code> at <code>PLATFORM_VAULT_PATH</code></td><td>Replica issues, pool saturation &gt;80%, elections, scored assessment needed</td></tr>
+          <tr><td><strong>/redis</strong></td><td><code>/redis perflab</code></td><td>Vault — keys <code>redisAdmin</code>, <code>redisPassword</code>, <code>redisSentinelAdmin</code>, <code>redisSentinelPassword</code></td><td>Eviction, sentinel issues, blocked_clients, memory &gt;80%</td></tr>
+          <tr><td><strong>/prometheus</strong></td><td><code>/prometheus perflab</code></td><td>Vault — optional <code>PROMETHEUS_AUTH</code> key at <code>PLATFORM_VAULT_PATH</code></td><td>Time-series CPU/memory/task-rate analysis scoped to incident window</td></tr>
+          <tr><td><strong>/itential-platform</strong></td><td><code>/itential-platform perflab</code></td><td>Vault — service-account at <code>SA_VAULT_PATH</code> using <code>SA_CLIENT_ID_KEY</code>/<code>SA_CLIENT_SECRET_KEY</code></td><td>Deep IAP admin: process health, adapter/application list, job worker control</td></tr>
+          <tr><td><strong>/itential-gateway</strong></td><td><code>/itential-gateway perflab</code></td><td>Vault — key named by <code>IAG_ADMIN_PASSWORD_KEY</code> at <code>PLATFORM_VAULT_PATH</code></td><td>IAG health, logs, service list, etcd cluster state</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="margin-top:24px;color:var(--pink-soft);">Vendor Skill Extension Policy</h3>
+    <div class="danger" style="margin-top:0;"><strong>Never modify any file listed in <code>vendor/platform-skills/SYNC_MANIFEST.json</code> or any file under <code>vendor/builder-skills/</code>.</strong> A future sync run silently overwrites those files — local changes are lost without warning.</div>
+    <p style="margin:10px 0 8px;">To add or override behavior in a vendor skill, create a <code>LOCAL-EXTENSIONS.md</code> file adjacent to the vendor <code>SKILL.md</code>. This file is NOT in <code>SYNC_MANIFEST.json</code> — it survives every sync unchanged.</p>
+    <div class="rules" style="grid-template-columns: 1fr; margin-top:8px;">
+      <div class="rule"><div class="rule-text"><strong>Step 1 — Create <code>LOCAL-EXTENSIONS.md</code></strong> at <code>.claude/skills/&lt;skill-name&gt;/LOCAL-EXTENSIONS.md</code>. Confirm it's not vendored: <code>grep "&lt;skill-name&gt;/LOCAL-EXTENSIONS" vendor/platform-skills/SYNC_MANIFEST.json</code> must return empty.</div></div>
+      <div class="rule"><div class="rule-text"><strong>Step 2 — Use two section labels:</strong> <code>[OVERRIDE] Section Name</code> replaces the vendor instruction entirely. <code>[INSERT AFTER Step N]</code> adds a step at the named position; surrounding vendor steps run unchanged.</div></div>
+      <div class="rule"><div class="rule-text"><strong>Step 3 — Add a CLAUDE.md pointer</strong> in the platform-skills section of <code>CLAUDE.md</code> so Claude always reads the extension file alongside the vendor SKILL.md. See the <code>/themis-aws-deploy</code> entry in <code>CLAUDE.md</code> as the template.</div></div>
+      <div class="rule"><div class="rule-text"><strong>Canonical example:</strong> <code>.claude/skills/themis-aws-deploy/LOCAL-EXTENSIONS.md</code> — the reference implementation for all future vendor skill extensions.</div></div>
+    </div>
+
+    <h3 style="margin-top:24px;color:var(--pink-soft);">Post-Sync Validation — Keeping Extensions in Sync</h3>
+    <p style="margin:0 0 10px;font-size:13px;color:var(--muted);">Every <code>scripts/sync-platform-skills.sh</code> run automatically validates any <code>LOCAL-EXTENSIONS.md</code> files for changed skills. Three issue types are detected:</p>
+    <div class="rules" style="margin-top:8px;">
+      <div class="rule"><div class="rule-text">
+        <strong>🔴 CRITICAL (exit 2)</strong> — An <code>[OVERRIDE]</code> or <code>[INSERT AFTER]</code> anchor no longer exists in the updated vendor SKILL.md. The extension section is silently inert until repaired. Run <code>/sync-vendor-skills</code> to find the renamed step and update the label.
+      </div></div>
+      <div class="rule"><div class="rule-text">
+        <strong>🟠 MODIFIED (exit 1)</strong> — Vendor step content changed (SHA1 hash diff against <code>git show HEAD:{path}</code>). Override may miss vendor improvements. <code>/sync-vendor-skills</code> shows a unified diff and offers keep / merge / skip.
+      </div></div>
+      <div class="rule"><div class="rule-text">
+        <strong>🟡 NEW (exit 1)</strong> — Vendor added a new step not covered by any extension. Vendor step runs as-is — review whether local customization is needed. <code>/sync-vendor-skills</code> shows the full step and offers skip / override / insert.
+      </div></div>
+      <div class="rule"><div class="rule-text">
+        <strong>Validator script:</strong> <code>scripts/validate-extensions.py [--skill &lt;name&gt;] [--json] [--save]</code>. Report saved to <code>.claude/skills/&lt;name&gt;/sync-validation-latest.md</code> with <code>--save</code>. Run <code>/sync-vendor-skills --report-only</code> in Claude Code to regenerate reports without applying fixes.
+      </div></div>
+    </div>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- JFrog RPM Repository -->
+  <div class="section">
+    <div class="section-label">RPM Downloads</div>
+    <h2>JFrog RPM Repository — Platform Packages</h2>
+    <p class="desc">Platform RPMs for on-prem / VM deployments are hosted at <span class="inline-code">itential.jfrog.io</span>. Use <span class="inline-code">scripts/pull-platform-rpms.sh</span> to browse and download them for local reproduction environments or to feed the Ansible deployer.</p>
+
+    <h3 style="margin-top:20px;color:var(--pink-soft);">Authentication Setup</h3>
+    <ol style="margin:10px 0 16px 20px;color:var(--muted);line-height:1.9;font-size:14px;">
+      <li>Generate a <strong>JFrog Identity Token</strong>: <span class="inline-code">itential.jfrog.io → User Profile → Generate Identity Token</span>. This is a per-engineer token — not shared via 1Password.</li>
+      <li>Add it to your <span class="inline-code">.env</span>:
+        <pre style="margin:6px 0 10px;"><span class="key">JFROG_TOKEN</span>=<span class="val">your-identity-token</span></pre>
+      </li>
+      <li>Verify the token works:
+        <pre style="margin:6px 0 10px;">bash scripts/pull-platform-rpms.sh --check</pre>
+      </li>
+    </ol>
+
+    <h3 style="margin-top:20px;color:var(--pink-soft);">JFrog Repo Map — Version Routing</h3>
+    <p class="desc" style="margin-bottom:8px;">Version routing is automatic — the script detects the era from the version string.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>JFrog Repo</th><th>Component</th><th>Version Scope</th></tr></thead>
+        <tbody>
+          <tr><td><code>itential-config-service-files</code></td><td>Platform (all components — legacy single repo)</td><td>23.2.x / 2023.x and below</td></tr>
+          <tr><td><code>PLATFORM</code></td><td>Platform core RPM</td><td>6.x+ (P6)</td></tr>
+          <tr><td><code>FLOWAI</code></td><td>FlowAI app</td><td>6.x+ (P6)</td></tr>
+          <tr><td><code>CONFIG</code></td><td>Configuration Manager</td><td>6.x+ (P6)</td></tr>
+          <tr><td><code>GATEWAY-MANAGER</code></td><td>Gateway Manager RPM</td><td>All versions</td></tr>
+          <tr><td><code>INVENTORY-MANAGER</code></td><td>Inventory Manager</td><td>All versions</td></tr>
+          <tr><td><code>SERVICE</code></td><td>Service Manager app</td><td>All versions</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="margin-top:20px;color:var(--pink-soft);">Pull Commands</h3>
+    <div class="code-block"><pre><span class="comment"># Verify token</span>
+<span class="cmd">scripts/pull-platform-rpms.sh</span> --check
+
+<span class="comment"># Browse available files for a version (no download)</span>
+<span class="cmd">scripts/pull-platform-rpms.sh</span> --version 6.4.0 --list
+
+<span class="comment"># Download all P6 components to repro/rpms/6.4.0/</span>
+<span class="cmd">scripts/pull-platform-rpms.sh</span> --version 6.4.0
+
+<span class="comment"># Download specific components only</span>
+<span class="cmd">scripts/pull-platform-rpms.sh</span> --version 6.4.0 --components platform,config,gateway-manager
+
+<span class="comment"># Legacy version (auto-routes to itential-config-service-files)</span>
+<span class="cmd">scripts/pull-platform-rpms.sh</span> --version 23.2.1 --list
+
+<span class="comment"># Custom output directory</span>
+<span class="cmd">scripts/pull-platform-rpms.sh</span> --version 6.4.0 --out-dir repro/ISD-9999/rpms</pre></div>
+
+    <div class="rules" style="margin-top:16px;">
+      <div class="rule"><div class="rule-text">
+        <strong>Browse-first pattern</strong> — the script uses the JFrog AQL API to discover the exact file path for each version rather than guessing the directory structure. Run <span class="inline-code">--list</span> first to confirm a version exists before downloading.
+      </div></div>
+      <div class="rule"><div class="rule-text">
+        <strong>Output</strong> — RPMs download to <span class="inline-code">repro/rpms/{VERSION}/</span> by default (override with <span class="inline-code">--out-dir</span>). A <span class="inline-code">JFROG_MANIFEST.json</span> is written alongside with filenames, sha256 checksums, and download timestamp.
+      </div></div>
+      <div class="rule"><div class="rule-text">
+        <strong>Docker vs RPMs</strong> — Docker image (<span class="inline-code">registry.itential.com/itential-platform:{version}</span>) is faster for local workflow/adapter/UI reproduction. RPMs are for full OS-level reproduction on a VM, upgrade path testing, or feeding the Ansible deployer (<span class="inline-code">platform_packages</span> in <span class="inline-code">run-vars.yml</span>).
+      </div></div>
+      <div class="rule"><div class="rule-text">
+        <strong>Deployer integration</strong> — pre-downloaded RPM paths can be supplied as <span class="inline-code">platform_packages: file:///path/to/rpm</span> in <span class="inline-code">run-vars.yml</span> so the Ansible deployer nodes do not need direct JFrog access. See <span class="inline-code">/themis-aws-deploy</span> skill.
+      </div></div>
+    </div>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- Environment Discovery Helper -->
+  <div class="section">
+    <div class="section-label">Helper Scripts</div>
+    <h2>Environment Discovery — list-environments.sh</h2>
+    <p class="desc">A read-only discovery script that consolidates every environment this repo knows about into a single view. Run it before starting an investigation or before a Themis build to confirm which environments are available and where they point — no grepping through scattered <code>.env</code> files.</p>
+
+    <div class="code-block"><pre><span class="comment"># Run from repo root — no arguments needed</span>
+<span class="cmd">scripts/list-environments.sh</span></pre></div>
+
+    <div class="rule-list" style="margin-top:16px;">
+      <div class="rule-item">
+        <div class="rule-label">Section 1 — .env files</div>
+        <div class="rule-body">Finds every <code>.env</code> / <code>.env.*</code> file up to 3 directory levels deep (excluding <code>.git/</code>, <code>node_modules/</code>, <code>.venv/</code>). Prints each file's <code>PLATFORM_URL</code> and <code>MONGO_URL</code>. Mongo credentials are redacted (<code>//***:***@</code>) before display — passwords and tokens are never echoed.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">Section 2 — Themis VM builds</div>
+        <div class="rule-body">Finds every <code>.claude/skills/themis-aws-deploy/environments/&lt;arch&gt;/inventory/hosts</code> file (live Ansible inventories written by Themis after provisioning). Parses the JSON and shows architecture, hostname, EC2 IP, and which roles (platform / mongodb / redis / gateway) land on each host.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">Read-only — no side effects</div>
+        <div class="rule-body">The script never sources, modifies, or authenticates against anything it finds. It reads files and prints summaries only. Safe to run at any time in any session.</div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- Themis / Environment Build Setup -->
+  <div class="section">
+    <div class="section-label">Environment Build</div>
+    <h2>Environment Build Setup — Themis AWS Deploy</h2>
+    <p class="desc">The <span class="inline-code">/themis-aws-deploy</span> skill provisions AWS EC2 instances and deploys Itential Platform end-to-end using OpenTofu + the <span class="inline-code">itential.deployer</span> Ansible collection. This section covers the one-time setup an engineer needs before the skill can run.</p>
+
+    <h3 style="margin-top:20px;color:var(--pink-soft);">Required Repos — Clone Once</h3>
+    <p style="margin:0 0 10px;">Three repos must be checked out locally. The skill uses them via symlinks — they are never installed globally.</p>
+    <div class="code-block"><pre><span class="comment"># 1. Themis — OpenTofu configs + inventory generator</span>
+<span class="cmd">git clone git@gitlab.com:itential/platform-engineering/themis.git</span>
+
+<span class="comment"># 2. itential.deployer — Ansible collection (Redis / MongoDB / Platform / Gateway roles)</span>
+<span class="cmd">git clone git@github.com:itential/itential.deployer.git</span>
+
+<span class="comment"># 3. itential.tls — TLS certificate generation playbooks</span>
+<span class="cmd">git clone git@gitlab.com:itential/platform-engineering/ansible/collections/itential.tls.git</span></pre></div>
+
+    <h3 style="margin-top:20px;color:var(--pink-soft);">Ansible Collections — Install Once</h3>
+    <p style="margin:0 0 8px;">The deployer roles need <code>community.crypto</code> for TLS certificate tasks. Install it into your user collection path — this is separate from the repo checkouts above.</p>
+    <div class="code-block"><pre><span class="comment"># Install community.crypto (needed for TLS cert generation in itential.tls)</span>
+<span class="cmd">ansible-galaxy collection install community.crypto</span>
+
+<span class="comment"># Verify</span>
+<span class="cmd">ansible-galaxy collection list | grep community.crypto</span>
+<span class="comment"># Expected output: community.crypto  X.Y.Z</span>
+
+<span class="comment"># If running Ansible from a venv, install inside it:</span>
+<span class="cmd">.venv/bin/pip install ansible</span>
+<span class="cmd">.venv/bin/ansible-galaxy collection install community.crypto</span></pre></div>
+    <div class="note" style="margin-top:6px;">The skill sets <code>ANSIBLE_COLLECTIONS_PATHS</code> to include the local deployer/tls repo paths (via symlinks), but <code>community.crypto</code> must be installed into the global or venv Ansible path — the symlink approach only works for the itential collections.</div>
+
+    <div class="warning" style="margin-top:12px;"><strong>Verify all three paths before the first run.</strong> A bad <code>deployer_repo</code> or <code>tls_repo</code> passes every check silently — the symlink works even when the path is wrong. The failure only surfaces at Step 5 (Ansible playbook), after AWS instances are already provisioned. Run the path checks in Step 2 of SKILL.md before invoking the skill.</div>
+
+    <h3 style="margin-top:24px;color:var(--pink-soft);">Required Tools</h3>
+    <div class="info-box">The full list of required tools (OpenTofu ≥ 1.6, Ansible ≥ 2.13, Python ≥ 3.8, AWS CLI, gh CLI, Ansible collections) is in the <button onclick="showTab('prereqs')" style="background:none;border:none;color:var(--pink-soft);cursor:pointer;text-decoration:underline;font-size:inherit;padding:0;">Prerequisites tab → One-Time Setup</button>.</div>
+
+    <h3 style="margin-top:24px;color:var(--pink-soft);">AWS Account Setup</h3>
+    <p style="margin:0 0 10px;">The skill defaults to the <code>pe-team-sbx</code> AWS SSO profile maintained by the PE team. Engineers on a different account must add three lines to <code>.env</code> — the skill reads them at Step 1 and generates a runtime <code>tfvars-overrides/auto-account.tfvars</code> override automatically.</p>
+
+    <p style="margin:0 0 6px;"><strong>Verify pe-team-sbx access:</strong></p>
+    <div class="code-block"><pre><span class="cmd">aws sso login --profile pe-team-sbx</span>
+<span class="cmd">aws sts get-caller-identity --profile pe-team-sbx</span></pre></div>
+
+    <p style="margin:10px 0 6px;"><strong>Custom account — add to <code>.env</code>:</strong></p>
+    <div class="code-block"><pre><span class="comment"># Required for non-pe-team-sbx accounts:</span>
+<span class="key">AWS_KEY_NAME</span>=your-ec2-key-pair-name
+<span class="key">AWS_SECURITY_GROUP_IDS</span>=sg-xxxxxxxxxxxx       <span class="comment"># must allow SSH (22) inbound</span>
+<span class="key">AWS_SUBNET_IDS</span>=subnet-aaa,subnet-bbb,subnet-ccc  <span class="comment"># 3 subnets → public-1a/b/c aliases</span>
+
+<span class="comment"># Optional — only needed outside us-east-1:</span>
+<span class="key">AWS_REGION</span>=us-west-2
+
+<span class="comment"># Optional — right-size VMs per role (all default to t3.medium):</span>
+<span class="key">AWS_INSTANCE_TYPE_PLATFORM</span>=t3.large
+<span class="key">AWS_INSTANCE_TYPE_REDIS</span>=t3.medium
+<span class="key">AWS_INSTANCE_TYPE_MONGODB</span>=t3.medium
+<span class="key">AWS_INSTANCE_TYPE_GATEWAY</span>=t3.medium</pre></div>
+
+    <div class="note" style="margin-top:8px;">Engineers on <code>pe-team-sbx</code> add nothing — the SG, subnets, and key pair defaults already exist in that account. Step 1b runs <code>scripts/generate_account_tfvars.py</code> to convert these into <code>auto-account.tfvars</code>. If no overrides are present, the file is removed and Themis's own <code>terraform.tfvars</code> applies unchanged.</div>
+
+    <p style="margin:10px 0 6px;"><strong>Verify resources exist before running:</strong></p>
+    <div class="code-block"><pre><span class="cmd">aws ec2 describe-key-pairs --key-names &lt;key_name&gt; --profile &lt;aws_profile&gt;</span>
+<span class="cmd">aws ec2 describe-security-groups --group-ids &lt;sg_id&gt; --profile &lt;aws_profile&gt;</span>
+
+<span class="comment"># List subnets in your default VPC — pick 3 in different AZs for public-1a/b/c:</span>
+<span class="cmd">aws ec2 describe-subnets \
+  --filters "Name=default-for-az,Values=true" \
+  --query 'Subnets[*].{ID:SubnetId,AZ:AvailabilityZone,CIDR:CidrBlock}' \
+  --output table \
+  --profile &lt;aws_profile&gt;</span></pre></div>
+
+    <h3 style="margin-top:20px;color:var(--pink-soft);">AWS Resources Required per Architecture</h3>
+    <p style="margin:0 0 10px;">The 3 subnet IDs in <code>AWS_SUBNET_IDS</code> map to Themis's <code>subnet_map</code> aliases <code>public-1a</code>, <code>public-1b</code>, <code>public-1c</code> in that order. Each should be in a different Availability Zone — Themis distributes VMs across AZs for HA designs.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Architecture</th><th>VMs</th><th>Subnets actually used</th><th>Min SG inbound rules</th><th>Recommended instance types</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>aio</code></td><td>1</td>
+            <td>1 subnet (public-1a only)</td>
+            <td>SSH (22) from your IP</td>
+            <td><code>t3.large</code> or larger — all components share one host</td>
+          </tr>
+          <tr>
+            <td><code>minimal</code></td><td>4</td>
+            <td>Up to 3 subnets (1 per VM role)</td>
+            <td>SSH (22) from your IP; all traffic within SG (self-referencing rule)</td>
+            <td>Platform: <code>t3.large</code>; Redis/MongoDB/Gateway: <code>t3.medium</code></td>
+          </tr>
+          <tr>
+            <td><code>ha2</code></td><td>9</td>
+            <td>All 3 subnets — Sentinel nodes distributed across AZs</td>
+            <td>SSH (22) from your IP; all traffic within SG (self-referencing rule)</td>
+            <td>Platform nodes: <code>t3.large</code>; all others: <code>t3.medium</code></td>
+          </tr>
+          <tr>
+            <td><code>asa</code></td><td>17</td>
+            <td>All 3 subnets — primary/secondary site distribution</td>
+            <td>SSH (22) from your IP; all traffic within SG (self-referencing rule)</td>
+            <td>Platform nodes: <code>t3.large</code>; all others: <code>t3.medium</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note" style="margin-top:8px;">Even for <code>aio</code> (1 VM), provide all 3 subnet IDs in <code>AWS_SUBNET_IDS</code> — Themis's <code>subnet_map</code> HCL block always declares all three keys. Only the first subnet (<code>public-1a</code>) is actually used for provisioning, but the plan fails if the other keys have empty values.</div>
+
+    <h3 style="margin-top:20px;color:var(--pink-soft);">Security Group Setup</h3>
+    <p style="margin:0 0 8px;">Create one SG per AWS account — reuse it across all Themis runs. The SG must allow:</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Direction</th><th>Protocol</th><th>Port(s)</th><th>Source / Dest</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td>Inbound</td><td>TCP</td><td>22</td><td>Your engineer IP (<code>/32</code>)</td><td>SSH — Ansible needs this to configure every instance</td></tr>
+          <tr><td>Inbound</td><td>All</td><td>All</td><td>This SG (self-referencing)</td><td>Inter-node traffic: MongoDB 27017, Redis 6379/26379, IAP 3000, IAG 8083, etcd 2379/2380</td></tr>
+          <tr><td>Outbound</td><td>All</td><td>All</td><td>0.0.0.0/0</td><td>Package installs (yum/dnf), JFrog RPM downloads, AWS APIs</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="code-block" style="margin-top:10px;"><pre><span class="comment"># Create the SG (run once per account):</span>
+<span class="cmd">aws ec2 create-security-group \
+  --group-name itential-themis-deploy \
+  --description "Themis deployer — SSH + inter-node" \
+  --profile &lt;aws_profile&gt;</span>
+<span class="comment"># Note the GroupId (sg-xxxx) from the output — use it in AWS_SECURITY_GROUP_IDS</span>
+
+<span class="comment"># Add SSH inbound from your current IP:</span>
+<span class="cmd">MY_IP=$(curl -s https://checkip.amazonaws.com)
+aws ec2 authorize-security-group-ingress \
+  --group-id sg-xxxx \
+  --protocol tcp --port 22 --cidr ${MY_IP}/32 \
+  --profile &lt;aws_profile&gt;</span>
+
+<span class="comment"># Add self-referencing rule (all inter-node traffic):</span>
+<span class="cmd">aws ec2 authorize-security-group-ingress \
+  --group-id sg-xxxx \
+  --protocol all --port all \
+  --source-group sg-xxxx \
+  --profile &lt;aws_profile&gt;</span></pre></div>
+    <div class="warning" style="margin-top:8px;"><strong>NAT / VPN users:</strong> If your outbound IP changes between sessions (corporate NAT rotation, VPN reconnect), Ansible SSH will start failing mid-deploy. Check your current IP before each run: <code>curl -s https://checkip.amazonaws.com</code>. Update the SG inbound rule if it changed.</div>
+
+    <h3 style="margin-top:24px;color:var(--pink-soft);">run-vars.yml — Complete Field Reference</h3>
+    <p style="margin:0 0 10px;">All runtime configuration lives in <span class="inline-code">.claude/skills/themis-aws-deploy/run-vars.yml</span>. Edit before every run — or per environment when running multiple in parallel.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Field</th><th>Required</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><code>architecture</code></td><td><span class="pill pill-req">Required</span></td><td><code>aio</code> | <code>minimal</code> | <code>ha2</code> | <code>asa</code> — drives tofu tfvars and inventory generation</td></tr>
+          <tr><td><code>os</code></td><td><span class="pill pill-req">Required</span></td><td><code>rocky8</code> | <code>rocky9</code> | <code>rhel8</code> | <code>rhel9</code> | <code>al2023</code> | <code>oracle9</code></td></tr>
+          <tr><td><code>themis_root</code></td><td><span class="pill pill-req">Required</span></td><td>Absolute path to the Themis repo checkout</td></tr>
+          <tr><td><code>owner</code></td><td><span class="pill pill-req">Required</span></td><td>AWS resource owner tag — passed as <code>-var owner=</code> to tofu</td></tr>
+          <tr><td><code>deployer_repo</code></td><td><span class="pill pill-req">Required</span></td><td>Absolute path to <code>itential.deployer</code> checkout — symlinked into local collections</td></tr>
+          <tr><td><code>tls_repo</code></td><td><span class="pill pill-req">Required</span></td><td>Absolute path to <code>itential.tls</code> checkout — symlinked into local collections</td></tr>
+          <tr><td><code>aws_profile</code></td><td><span class="pill pill-req">Required</span></td><td>AWS CLI profile for EC2 provisioning; default: <code>pe-team-sbx</code></td></tr>
+          <tr><td><code>ssh_key_path</code></td><td><span class="pill pill-req">Required</span></td><td>Path to SSH private key for EC2 access — injected as <code>ansible_ssh_private_key_file</code></td></tr>
+          <tr><td><code>repository_username</code></td><td><span class="pill pill-req">Required</span></td><td>Leave blank (<code>""</code>) — JFrog token auth does not use a username</td></tr>
+          <tr><td><code>repository_password</code></td><td><span class="pill pill-req">Required</span></td><td>Paste your <code>JFROG_TOKEN</code> value here. <strong>Not read from <code>.env</code> automatically</strong> — copy the token value manually. If left blank and <code>JFROG_TOKEN</code> is set in <code>.env</code>, the skill auto-populates it at Step 1.</td></tr>
+          <tr><td><code>deployment_scope</code></td><td><span class="pill pill-opt">Optional</span></td><td><code>full</code> (default) | <code>redis</code> | <code>mongodb</code> | <code>platform</code> | <code>gateway</code> | <code>none</code></td></tr>
+          <tr><td><code>certify_scope</code></td><td><span class="pill pill-opt">Optional</span></td><td><code>full</code> (default) | <code>redis</code> | <code>mongodb</code> | <code>platform</code> | <code>none</code></td></tr>
+          <tr><td><code>platform_release</code></td><td><span class="pill pill-opt">Optional</span></td><td>Override Themis's pinned release. Must be set together with <code>platform_packages</code> — setting only one has no effect.</td></tr>
+          <tr><td><code>platform_packages</code></td><td><span class="pill pill-opt">Optional</span></td><td>List of RPM URLs or <code>file://</code> paths. Get exact JFrog URLs with: <code>scripts/pull-platform-rpms.sh --version X.Y.Z --list</code></td></tr>
+          <tr><td><code>gateway_release</code></td><td><span class="pill pill-opt">Optional</span></td><td>Gateway version string (e.g. <code>"4.4"</code>). If unset, Gateway deploy is skipped even when <code>deployment_scope: full</code>.</td></tr>
+          <tr><td><code>gateway_whl_file</code></td><td><span class="pill pill-opt">Optional</span></td><td>Gateway wheel filename, resolved relative to <code>&lt;deployer_repo&gt;/playbooks/files/</code>. The file must exist there — the gateway role hard-fails if it doesn't. If blank and <code>JFROG_TOKEN</code> is set, the skill auto-pulls the <code>.whl</code> from JFrog <code>automation-gateway</code> repo.</td></tr>
+          <tr><td><code>artifacts_retention_days</code></td><td><span class="pill pill-opt">Optional</span></td><td>Days to keep old run artifacts (inventory snapshots, PKI, reports). Default: <code>30</code>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="margin-top:24px;color:var(--pink-soft);">Architecture Reference</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Architecture</th><th>Total VMs</th><th>Host groups</th><th>Est. time (provision→certify)</th></tr></thead>
+        <tbody>
+          <tr><td><code>aio</code></td><td>1</td><td>redis_master, mongodb_primary, platform (gateway colocated on same host)</td><td>~45–70 min</td></tr>
+          <tr><td><code>minimal</code></td><td>4 (incl. gateway)</td><td>redis_master, mongodb_primary, platform, gateway</td><td>~57 min</td></tr>
+          <tr><td><code>ha2</code></td><td>9 (incl. gateway)</td><td>redis_master/replica/sentinel (×3), mongodb_primary/replica (×3), platform (×2), gateway</td><td>~44 min</td></tr>
+          <tr><td><code>asa</code></td><td>17 (incl. 2 gateway)</td><td>redis/redis_secondary (×6), mongodb/mongodb_arbiter (×5), platform/platform_secondary (×4), gateway (×2)</td><td>~68 min</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note" style="margin-top:8px;">Timing measured 2026-08-11 end-to-end on Rocky 9, <code>t3.medium</code>/<code>t3.large</code>, <code>pe-team-sbx</code>. This is real AWS + Ansible latency (cloud-init boot, package installs, TLS cert generation, MongoDB replica-set formation) — not approval waiting. There are zero decision pauses once the skill starts.</div>
+
+    <h3 style="margin-top:24px;color:var(--pink-soft);">Platform RPMs — Configuring platform_packages</h3>
+    <p style="margin:0 0 10px;">Themis pins <code>platform_release</code> and <code>platform_packages</code> to a fixed version in its own group_vars. To deploy a different version, you must override <em>both</em> in <code>run-vars.yml</code>.</p>
+    <div class="code-block"><pre><span class="comment"># 1. Browse JFrog for exact file paths</span>
+<span class="cmd">scripts/pull-platform-rpms.sh</span> --version 6.4.0 --list
+
+<span class="comment"># 2. Set in run-vars.yml:</span>
+<span class="key">platform_release</span>: <span class="val">6</span>
+<span class="key">platform_packages</span>:
+  - <span class="val">https://itential.jfrog.io/artifactory/PLATFORM/&lt;path&gt;/itential-platform-6.4.0-1.noarch.rpm</span>
+  - <span class="val">https://itential.jfrog.io/artifactory/CONFIG/&lt;path&gt;/itential-configuration_manager-6.4.0-1.noarch.rpm</span>
+  - <span class="val">https://itential.jfrog.io/artifactory/GATEWAY-MANAGER/&lt;path&gt;/itential-gateway_manager-1.0.8.noarch.rpm</span>
+  - <span class="val">https://itential.jfrog.io/artifactory/INVENTORY-MANAGER/&lt;path&gt;/itential-inventory-manager-1.0.7.noarch.rpm</span>
+
+<span class="comment"># Alternatively, pre-download and supply local file:// paths:</span>
+<span class="cmd">scripts/pull-platform-rpms.sh</span> --version 6.4.0 --out-dir /tmp/rpms
+<span class="comment"># Then in run-vars.yml:</span>
+<span class="key">platform_packages</span>:
+  - <span class="val">file:///tmp/rpms/itential-platform-6.4.0-1.noarch.rpm</span></pre></div>
+    <div class="note" style="margin-top:8px;">The <code>file://</code> approach is useful when deployer nodes don't have direct JFrog access, or when you've already downloaded the RPMs to a specific version for isolated testing.</div>
+
+    <h3 style="margin-top:24px;color:var(--pink-soft);">Testing All 4 Architectures in Parallel</h3>
+    <p style="margin:0 0 10px;">To validate a deployer release against all architectures simultaneously, use the orchestrator script. Each architecture gets its own tofu workspace and isolated filesystem — one failure does not affect the others.</p>
+    <div class="code-block"><pre><span class="comment"># Pull latest itential.deployer main + test all 4 architectures</span>
+<span class="cmd">.venv/bin/python3 scripts/test_all_environments.py</span> \
+  --skill-dir .claude/skills/themis-aws-deploy \
+  --run-vars .claude/skills/themis-aws-deploy/run-vars.yml \
+  --pull-deployer
+
+<span class="comment"># Test a subset only</span>
+<span class="cmd">.venv/bin/python3 scripts/test_all_environments.py</span> \
+  --skill-dir .claude/skills/themis-aws-deploy \
+  --run-vars .claude/skills/themis-aws-deploy/run-vars.yml \
+  --archs ha2,asa</pre></div>
+    <p style="margin:8px 0 0;color:var(--muted);">Progress per architecture: read <code>environments/&lt;arch&gt;/status.json</code> (phase-by-phase PASSED/FAILED) or tail <code>environments/&lt;arch&gt;/pipeline.log</code>. The orchestrator prints a consolidated pass/fail matrix when all environments finish.</p>
+
+    <h3 style="margin-top:24px;color:var(--pink-soft);">Known Gaps &amp; Auto-Fixes</h3>
+    <div class="rules" style="grid-template-columns: 1fr;">
+      <div class="rule"><div class="rule-text"><strong>No <code>gateway</code> inventory group</strong> — <code>generate_inventory.py</code> never creates a <code>gateway</code> group for any design. The skill fixes this automatically via <code>scripts/fix_gateway_group.py</code>: adds gateway instances from tofu state, or reuses the single AIO host. No manual edit needed.</div></div>
+      <div class="rule"><div class="rule-text"><strong>TLS cert SSH key not injected until Step 4c</strong> — TLS generation (Step 4a) runs before <code>apply_run_vars.py</code> (Step 4c), so <code>ansible_ssh_private_key_file</code> isn't in group_vars yet. The skill always passes <code>-e ansible_ssh_private_key_file=&lt;ssh_key_path&gt;</code> explicitly on TLS playbook calls to avoid auth failures on fresh inventories.</div></div>
+      <div class="rule"><div class="rule-text"><strong>MongoDB replica/arbiter TLS wiring</strong> — <code>mongodb_replica</code> and <code>mongodb_arbiter</code> groups don't inherit vars from sibling groups. The skill writes <code>custom_tls.yml</code> into each group explicitly in Step 4b.</div></div>
+      <div class="rule"><div class="rule-text"><strong>Stale tofu state</strong> — before applying, the skill checks each instance in state against AWS (<code>ec2 describe-instances</code>). Any <code>InvalidInstanceID.NotFound</code> entry is automatically removed with <code>tofu state rm</code> before apply — no confirmation needed, the resource is already gone.</div></div>
+      <div class="rule"><div class="rule-text"><strong>Gateway deploy skipped when <code>gateway_release</code> is unset</strong> — the deployer role asserts <code>gateway_release</code> is defined before doing anything. The skill checks for this field and skips the gateway playbook if absent, rather than failing the entire deploy.</div></div>
+      <div class="rule"><div class="rule-text"><strong>Sentinel certify reports stay remote</strong> — the Sentinel certify report is never fetched to the local reports directory automatically. The skill fetches it via <code>scp</code> from each sentinel host after <code>certify_redis</code> runs, into <code>environments/&lt;arch&gt;/reports/sentinel/</code>.</div></div>
+    </div>
+
+    <h3 style="margin-top:24px;color:var(--pink-soft);">Pre-Run Decision Checklist</h3>
+    <div class="info-box">The pre-run decision checklist has moved to the <button onclick="showTab('prereqs')" style="background:none;border:none;color:var(--pink-soft);cursor:pointer;text-decoration:underline;font-size:inherit;padding:0;">Prerequisites tab → Themis Pre-Run Checklist</button>.</div>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- Architecture Testing -->
+  <div class="section">
+    <div class="section-label">Testing</div>
+    <h2>Testing All Architectures — Step-by-Step</h2>
+    <p class="desc">How to validate each of the four Themis architectures (<span class="inline-code">aio</span>, <span class="inline-code">minimal</span>, <span class="inline-code">ha2</span>, <span class="inline-code">asa</span>) end-to-end. Complete the one-time setup in the AWS Account Setup section above before running any architecture test. Each test is independent — run them sequentially or in parallel across separate terminal sessions.</p>
+
+    <h3 style="margin-top:20px;color:var(--pink-soft);">Architecture Reference — Cost and Time</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Architecture</th><th>VMs</th><th>Approx. Runtime</th><th>What It Validates</th><th>Destroy Command</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>aio</code></td><td>1</td><td>~45–70 min</td>
+            <td>Single VM — all IAP components colocated. Redis, MongoDB, Platform, and IAG run on same instance. Best first test — cheapest, fastest.</td>
+            <td><code>tofu destroy -var-file=tfvars/aio.tfvars ...</code></td>
+          </tr>
+          <tr>
+            <td><code>minimal</code></td><td>4</td><td>~57 min</td>
+            <td>Dedicated Redis, MongoDB, Platform, and Gateway VMs. Validates multi-node inventory generation and deployer inter-node communication.</td>
+            <td><code>tofu destroy -var-file=tfvars/minimal.tfvars ...</code></td>
+          </tr>
+          <tr>
+            <td><code>ha2</code></td><td>9</td><td>~44 min</td>
+            <td>Redis Sentinel (×3), MongoDB ReplicaSet (×3), Platform (×2), Gateway. Validates HA quorum, sentinel promotion, and replica set election.</td>
+            <td><code>tofu destroy -var-file=tfvars/ha2.tfvars ...</code></td>
+          </tr>
+          <tr>
+            <td><code>asa</code></td><td>17</td><td>~68 min</td>
+            <td>Dual-site Active/Standby. Flat naming: redis01–06, mongo01–05, platform01–04, gateway01–02. Validates cross-site replication and failover readiness.</td>
+            <td><code>tofu destroy -var-file=tfvars/asa.tfvars ...</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="margin-top:24px;color:var(--pink-soft);">Step-by-Step Test Sequence (per architecture)</h3>
+    <p style="margin:0 0 8px;">Run these steps for each architecture. Replace <code>&lt;arch&gt;</code> with <code>aio</code>, <code>minimal</code>, <code>ha2</code>, or <code>asa</code>.</p>
+
+    <div class="rules" style="grid-template-columns: 1fr; margin-top:8px;">
+      <div class="rule"><div class="rule-text">
+        <strong>Step 1 — Pre-flight check</strong><br/>
+        <pre style="margin:6px 0 0;">aws sts get-caller-identity --profile &lt;aws_profile&gt;
+# Confirm key pair and SG exist (see AWS Account Setup section)
+# Confirm itential.tls is cloned and tls_repo path is correct</pre>
+      </div></div>
+
+      <div class="rule"><div class="rule-text">
+        <strong>Step 2 — Set architecture in run-vars.yml</strong><br/>
+        <pre style="margin:6px 0 0;">nano .claude/skills/themis-aws-deploy/run-vars.yml
+# Set: architecture: &lt;arch&gt;
+# Confirm: os, themis_root, owner, deployer_repo, tls_repo, aws_profile, ssh_key_path
+# repository_password: leave blank if JFROG_TOKEN is in .env (auto-populated)</pre>
+      </div></div>
+
+      <div class="rule"><div class="rule-text">
+        <strong>Step 3 — Run the skill</strong><br/>
+        <pre style="margin:6px 0 0;">/themis-aws-deploy</pre>
+        Claude drives all steps autonomously: Step 1a–1c (.env resolution, tfvars generation, gateway .whl pull), Steps 2–4 (tofu plan/apply, inventory, ansible deploy), Step 5 (certify). Monitor the session output for per-step progress.
+      </div></div>
+
+      <div class="rule"><div class="rule-text">
+        <strong>Step 4 — Review certify reports</strong><br/>
+        <pre style="margin:6px 0 0;">ls .claude/skills/themis-aws-deploy/artifacts/&lt;arch&gt;/&lt;timestamp&gt;/reports/</pre>
+        Check <code>certify_report.md</code> for PASS/FAIL per component. For HA architectures also verify:
+        <ul style="margin:6px 0 0 16px;line-height:1.8;">
+          <li><strong>minimal / ha2 / asa</strong>: Redis sentinel mode active, MongoDB replica set formed</li>
+          <li><strong>ha2</strong>: Both Platform nodes registered, sentinel master elected</li>
+          <li><strong>asa</strong>: All 4 platform nodes registered; gateway01 and gateway02 both healthy; cross-site MongoDB replication lag &lt; 10s</li>
+        </ul>
+      </div></div>
+
+      <div class="rule"><div class="rule-text">
+        <strong>Step 5 — Destroy (do not skip)</strong><br/>
+        <div class="danger" style="margin:6px 0 4px;"><strong>Always destroy after testing.</strong> EC2 instances accrue charges until explicitly destroyed.</div>
+        <pre style="margin:4px 0 0;">cd &lt;themis_root&gt;/vms/aws
+
+tofu destroy \
+  -var-file=tfvars/&lt;arch&gt;.tfvars \
+  -var-file=tfvars/&lt;os&gt;.tfvars \
+  -var owner=&lt;owner&gt; \
+  -var profile=&lt;aws_profile&gt; \
+  -auto-approve
+
+# If ACCOUNT_TFVARS was generated:
+tofu destroy \
+  -var-file=tfvars/&lt;arch&gt;.tfvars \
+  -var-file=.claude/skills/themis-aws-deploy/tfvars-overrides/auto-account.tfvars \
+  -var-file=tfvars/&lt;os&gt;.tfvars \
+  -var owner=&lt;owner&gt; \
+  -var profile=&lt;aws_profile&gt; \
+  -auto-approve</pre>
+        Confirm with: <code>aws ec2 describe-instances --profile &lt;aws_profile&gt; --filters "Name=tag:Owner,Values=&lt;owner&gt;" --query 'Reservations[].Instances[].State.Name'</code> — all should show <code>terminated</code>.
+      </div></div>
+    </div>
+
+    <h3 style="margin-top:24px;color:var(--pink-soft);">Parallel Testing (all 4 architectures simultaneously)</h3>
+    <p style="margin:0 0 8px;">Use <span class="inline-code">scripts/test_all_environments.py</span> to run all four architectures in parallel. Each architecture gets its own timestamped artifact directory. Requires enough AWS quota for 31 EC2 instances (1+4+9+17) in the target account.</p>
+    <div class="code-block"><pre><span class="comment"># Check AWS quota first (recommended: vCPU limit &gt;= 80 in target region)</span>
+<span class="cmd">python3 scripts/test_all_environments.py \
+  --skill-dir .claude/skills/themis-aws-deploy \
+  --run-vars .claude/skills/themis-aws-deploy/run-vars.yml \
+  --architectures aio,minimal,ha2,asa \
+  --profile &lt;aws_profile&gt;</span>
+
+<span class="comment"># Monitor progress (each arch logs to its own file)</span>
+<span class="cmd">tail -f .claude/skills/themis-aws-deploy/artifacts/*/&lt;timestamp&gt;/deploy.log</span>
+
+<span class="comment"># Destroy all after testing</span>
+<span class="cmd">python3 scripts/test_all_environments.py --destroy-only --profile &lt;aws_profile&gt;</span></pre></div>
+
+    <h3 style="margin-top:24px;color:var(--pink-soft);">Architecture-Specific Verification Checklist</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Architecture</th><th>Key Things to Verify</th><th>Command / Check</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>aio</code></td>
+            <td>IAP accessible, all services running on single VM</td>
+            <td><code>curl -k https://&lt;public-ip&gt;:3000/health</code><br/>IAG: <code>curl -k https://&lt;public-ip&gt;:8083/health</code></td>
+          </tr>
+          <tr>
+            <td><code>minimal</code></td>
+            <td>4 VMs reachable; gateway VM routes to platform VM correctly</td>
+            <td><code>certify_report.md</code> → all PASS; SSH to each VM from deployer</td>
+          </tr>
+          <tr>
+            <td><code>ha2</code></td>
+            <td>Redis Sentinel elected; MongoDB replica set PRIMARY elected; both Platform nodes registered</td>
+            <td>Redis: <code>redis-cli -h &lt;redis01&gt; sentinel masters</code><br/>Mongo: <code>mongo --eval "rs.status()"</code></td>
+          </tr>
+          <tr>
+            <td><code>asa</code></td>
+            <td>All 17 VMs provisioned with flat naming (redis01–06, mongo01–05, platform01–04, gateway01–02); cross-site replication active</td>
+            <td><code>tofu output -json | jq '.instances.value | keys'</code> — verify flat names; MongoDB: <code>rs.status().members</code> shows all 5 members</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- Platform Skills Operational Setup -->
+  <div class="section">
+    <div class="section-label">Operational Skills Setup</div>
+    <h2>Platform Skills — Operational PE Environment Setup</h2>
+    <p class="desc">The five operational platform skills (<span class="inline-code">/mongodb</span>, <span class="inline-code">/redis</span>, <span class="inline-code">/prometheus</span>, <span class="inline-code">/itential-platform</span>, <span class="inline-code">/itential-gateway</span>) use a <strong>different credential model</strong> from the troubleshooting sub-skills. They authenticate via HashiCorp Vault — not directly from <code>.env</code>. This is because they are designed for PE-managed environments (perflab, production support environments) where credentials are centrally managed in Vault.</p>
+
+    <div class="danger" style="margin-top:4px;"><strong>These are NOT customer-environment skills.</strong> The credential model requires your SSH key, a Vault token, and an environment CLAUDE.md file describing the target cluster. They cannot be pointed at an arbitrary customer IAP instance — use the main <code>.env</code>-based troubleshoot sub-skills for customer environments instead.</div>
+
+    <h3 style="margin-top:24px;color:var(--pink-soft);">Prerequisites</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Requirement</th><th>How to obtain</th></tr></thead>
+        <tbody>
+          <tr><td><strong>SSH key at <code>~/.ssh/claude_perflab</code></strong> (or team-standard path)</td><td>Obtain from team lead — same key used for pe-ansible access</td></tr>
+          <tr><td><strong>HashiCorp Vault token</strong></td><td>Run <code>vault login</code> against the team Vault server, or source from <code>vault-env.sh</code>; token goes in <code>vault-env.sh</code> as <code>VAULT_TOKEN=hvs.xxxx</code></td></tr>
+          <tr><td><strong><code>vault-env.sh</code> file</strong></td><td>Create in the repo root (gitignored); sourced by the skills before every Vault call — see template below</td></tr>
+          <tr><td><strong><code>environments/&lt;env-name&gt;/CLAUDE.md</code></strong></td><td>One file per target environment (perflab, prod-support, etc.); describes cluster topology for that environment — see template below</td></tr>
+          <tr><td><strong>SSH key path in Claude's persistent memory</strong></td><td>Tell Claude once: "remember my ssh_key_path is <code>~/.ssh/claude_perflab</code>" — it persists across sessions</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="margin-top:20px;color:var(--pink-soft);">vault-env.sh — Template</h3>
+    <p style="margin:0 0 8px;">Create this file in the repo root. The skills source it before any Vault call. Never commit it — it is already gitignored.</p>
+    <div class="code-block"><pre><span class="comment">#!/bin/bash
+# vault-env.sh — sourced by platform-skills for Vault auth
+# NEVER commit this file</span>
+<span class="key">export VAULT_ADDR</span>=<span class="val">https://vault.pe.itential.io:8200</span>   <span class="comment"># or your team's Vault URL</span>
+<span class="key">export VAULT_TOKEN</span>=<span class="val">hvs.your-vault-token-here</span>
+<span class="key">export VAULT_SKIP_VERIFY</span>=<span class="val">false</span>                          <span class="comment"># set true only for self-signed certs</span></pre></div>
+
+    <h3 style="margin-top:20px;color:var(--pink-soft);">environments/&lt;env-name&gt;/CLAUDE.md — Templates per Skill</h3>
+    <p style="margin:0 0 8px;">Each environment gets its own directory under <code>environments/</code>. Create a <code>CLAUDE.md</code> in it. The skills read this file to learn the topology of the target cluster. Below are the key variables each skill needs:</p>
+
+    <div class="table-wrap" style="margin-bottom:16px;">
+      <table>
+        <thead><tr><th>Skill</th><th>Required variables in <code>environments/&lt;env-name&gt;/CLAUDE.md</code></th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>/mongodb</code></td>
+            <td><code>MONGO_NODES=node1.host,node2.host,node3.host</code><br><code>MONGO_PORT=27017</code><br><code>MONGO_RS=rs0</code><br><code>VAULT_ADDR=https://...</code><br><code>PLATFORM_VAULT_PATH=itential/iap</code><br><code>MONGO_SSH_USER=ec2-user</code><br><code>MONGO_TLS_ENABLED=true</code> (if TLS on)<br><code>MONGO_TLS_CA=/etc/pki/tls/certs/mongodb/rootCA.pem</code></td>
+          </tr>
+          <tr>
+            <td><code>/redis</code></td>
+            <td><code>REDIS_NODES=node1.host,node2.host,node3.host</code><br><code>REDIS_PORT=6379</code><br><code>REDIS_MODE=sentinel</code><br><code>SENTINEL_PORT=26379</code><br><code>SENTINEL_MASTER=mymaster</code><br><code>VAULT_ADDR=https://...</code><br><code>PLATFORM_VAULT_PATH=itential/iap</code><br><code>REDIS_SSH_USER=ec2-user</code></td>
+          </tr>
+          <tr>
+            <td><code>/prometheus</code></td>
+            <td><code>PROMETHEUS_HOST=monitor.host</code><br><code>PROMETHEUS_PORT=9090</code><br><code>PROMETHEUS_AUTH=none</code> or <code>basic</code> or <code>bearer</code><br><code>VAULT_ADDR=https://...</code> (only when auth ≠ none)<br><code>PLATFORM_VAULT_PATH=itential/iap</code> (only when auth ≠ none)</td>
+          </tr>
+          <tr>
+            <td><code>/itential-platform</code></td>
+            <td><code>IAP_HOST=iap.host</code><br><code>IAP_PORT=3000</code><br><code>IAP_NODES=node1.host,node2.host</code><br><code>VAULT_ADDR=https://...</code><br><code>SA_VAULT_PATH=platform-engineering/perflab-iap-service-accounts</code><br><code>SA_CLIENT_ID_KEY=claude-user-client-id</code><br><code>SA_CLIENT_SECRET_KEY=claude-user-client-secret</code><br><code>IAP_SSH_USER=ec2-user</code><br><code>AUTH_METHOD=oauth</code></td>
+          </tr>
+          <tr>
+            <td><code>/itential-gateway</code></td>
+            <td><code>IAG_HOST=iag.host</code><br><code>IAG_PORT=8083</code><br><code>VAULT_ADDR=https://...</code><br><code>PLATFORM_VAULT_PATH=itential/iap</code><br><code>IAG_ADMIN_USER=admin</code><br><code>IAG_ADMIN_PASSWORD_KEY=iagAdminPassword</code><br><code>IAG_SSH_USER=ec2-user</code><br><code>IAG_BACKEND=etcd</code> or <code>fs</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p style="margin:0 0 8px;"><strong>Example directory structure:</strong></p>
+    <div class="code-block"><pre>environments/
+├── perflab/
+│   └── CLAUDE.md        ← perflab cluster config
+├── prod-support/
+│   └── CLAUDE.md        ← production support cluster config
+└── asa-test/
+    └── CLAUDE.md        ← ASA test environment config</pre></div>
+
+    <h3 style="margin-top:20px;color:var(--pink-soft);">Invoking Operational Skills</h3>
+    <div class="code-block"><pre><span class="comment"># Always specify the environment name when invoking:</span>
+<span class="cmd">/mongodb perflab</span>
+<span class="cmd">/redis perflab</span>
+<span class="cmd">/prometheus prod-support</span>
+<span class="cmd">/itential-platform perflab</span>
+<span class="cmd">/itential-gateway perflab</span></pre></div>
+    <p style="margin:8px 0 0;color:var(--muted);">The skill reads <code>environments/&lt;env-name&gt;/CLAUDE.md</code>, sources <code>vault-env.sh</code>, fetches credentials from Vault, then connects via SSH. SSH key path must be in Claude's persistent memory as <code>ssh_key_path</code> — the skill does not prompt for it during execution.</p>
   </div>
 
   <hr class="section-divider" />
@@ -2234,7 +4386,7 @@ SSH_ROLE_1=iap</pre></div>
   <!-- ── /troubleshoot-adapters ─────────────────────────── -->
   <div class="section">
     <h2 id="sk-adapters">&#9632; /troubleshoot-adapters — Adapter OFFLINE / Auth Failures / Kafka</h2>
-    <p class="desc">Five phases covering the full adapter diagnostic cycle. Phases 1–3 handle REST/SOAP/custom adapters with gated debug mode. Phase 4 handles Kafka. Phase 5 inspects the OSS adapter's GitLab source to map error codes, detect auth patterns, and build reproduction steps — derived findings only, no source code is recorded or shared.</p>
+    <p class="desc">Six phases covering the full adapter diagnostic and install cycle. Phases 1–3 handle REST/SOAP/custom adapters with gated debug mode. Phase 4 handles Kafka. Phase 5 inspects the OSS adapter's GitLab source to map error codes, detect auth patterns, and build reproduction steps — derived findings only, no source code is recorded or shared. Phase 6 installs a new adapter from GitLab and creates a sample instance — all state-changing steps are gated.</p>
 
     <div class="cards" style="margin-bottom:24px;">
       <div class="card t-magenta">
@@ -2262,6 +4414,11 @@ SSH_ROLE_1=iap</pre></div>
         <h3>Phase 5 — GitLab Source Inspection</h3>
         <p>For OSS adapters: fetch <code>error.json</code> (map error codes → root cause), <code>package.json</code> (version, deps, entry point), and adapter source (auth method detection, required properties, SSL/TLS patterns, silent catch blocks) directly from <code>gitlab.com/itentialopensource/adapters</code>. Produces derived findings + reproduction steps. <strong>No code recorded or shared.</strong></p>
       </div>
+      <div class="card t-purple">
+        <div class="icon">IN</div>
+        <h3>Phase 6 — Adapter Install</h3>
+        <p>Clone adapter from <code>gitlab.com/itentialopensource/adapters</code>. Stage files to <code>/opt/itential/platform/services/adapter-{name}/</code> via <code>npm pack</code> → tar extract → <code>npm install --omit=dev</code>. Platform restart and instance creation each require explicit engineer consent — enforced by the <code>bash-safety-guard.py</code> hook.</p>
+      </div>
     </div>
 
     <div class="rule-list">
@@ -2288,6 +4445,18 @@ SSH_ROLE_1=iap</pre></div>
       <div class="rule-item">
         <div class="rule-label">Code privacy rule</div>
         <div class="rule-body">Phase 5 analyzes adapter source in memory only. No code is saved to disk, included in Jira comments, or sent to customers. Only derived findings are recorded: supported auth methods, required properties, error code catalog entries, SSL options, and reproduction step configuration.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">Phase 6 — file staging vs. activation</div>
+        <div class="rule-body">Copying adapter package files onto disk (<code>npm pack</code>, tar extract, <code>npm install</code> into <code>/opt/itential/platform/services/adapter-{name}/</code>) is unattended and runs automatically. The two steps that make the adapter <em>live</em> — platform restart (loads the new model) and creating the adapter/sample instance — each require explicit engineer approval enforced by <code>.claude/hooks/bash-safety-guard.py</code>.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">importAdapter vs createAdapter</div>
+        <div class="rule-body">Use <code>POST /adapters/import</code> (importAdapter) by default — it accepts any package regardless of whether <code>brokers</code> exists in <code>pronghorn.json</code>. Using <code>POST /adapters</code> (createAdapter) silently fails for adapters that lack a <code>brokers</code> key, returning a 200 with no instance created. Always prefix the curl command with <code>ADAPTER_CREATE_APPROVED=yes</code> after getting engineer consent.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">DEAD/OFFLINE is normal after install</div>
+        <div class="rule-body">A freshly created adapter instance starts in DEAD or OFFLINE state — this is expected. Starting the adapter requires a separate explicit consent action. Phase 6e verifies the adapter appears in the adapters list and polls the <code>/health/adapters</code> endpoint after starting.</div>
       </div>
       <div class="rule-item">
         <div class="rule-label">Fix path</div>
@@ -2554,6 +4723,289 @@ SSH_ROLE_1=iap</pre></div>
         </tr>
       </tbody>
     </table>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- ── /deploy-containers ─────────────────────────────── -->
+  <div class="section">
+    <h2 id="sk-deploy-containers">&#9632; /deploy-containers — Containerized Environment Provisioning</h2>
+    <p class="desc">Provisions an isolated Itential Platform reproduction environment using Docker Compose (local or VM) or Kubernetes Helm charts on EKS. Wired into <code>/troubleshoot</code> Phase 3 via Step 3b.0 — the reproduction deployment type selection. ECR authentication reuses the same CRED_MODE pattern as <code>/themis-aws-deploy</code>.</p>
+
+    <div class="cards" style="margin-bottom:24px;">
+      <div class="card t-blue">
+        <div class="icon">DL</div>
+        <h3>Docker Local</h3>
+        <p>Run the <code>itential-dev-stack</code> Docker Compose stack on this machine (macOS / Windows / Linux). Fastest path — platform + MongoDB + Redis on localhost. Ports bound to <code>127.0.0.1:</code> by default.</p>
+      </div>
+      <div class="card t-purple">
+        <div class="icon">VM</div>
+        <h3>Docker on VM</h3>
+        <p>Deploy the dev stack onto an SSH-accessible Linux VM. Two sub-options: use an existing VM, or provision a fresh bare EC2 instance (Rocky Linux 9) using the AWS profile from ECR auth. Docker Engine auto-installed on fresh EC2.</p>
+      </div>
+      <div class="card t-magenta">
+        <div class="icon">K8</div>
+        <h3>Kubernetes on EKS</h3>
+        <p>Deploy IAP, IAG5, or IAG4 via Helm 3.15+ on an existing cluster or a newly provisioned EKS cluster. Minimum grade: <code>m5a.xlarge</code> (4c/16G). Production grade: <code>c6a.4xlarge</code> (16c/32G). External MongoDB and Redis required.</p>
+      </div>
+    </div>
+
+    <div class="rule-list">
+      <div class="rule-item">
+        <div class="rule-label">Step 0 — menu</div>
+        <div class="rule-body">Four-option menu: Docker local / Docker on VM / Kubernetes / VMs on AWS (redirects to <code>/themis-aws-deploy</code>). Bypassed by argument: <code>/deploy-containers k8s</code>.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">Step 1 — ECR auth</div>
+        <div class="rule-body">Discovers AWS profiles from <code>~/.aws</code> and <code>.env</code>. Engineer selects via numbered menu. Sets <code>CRED_MODE=profile</code> or <code>static-env-vars</code>. Logs in to <code>497639811223.dkr.ecr.us-east-2.amazonaws.com</code>.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">2.k8s.0 — Cluster grade</div>
+        <div class="rule-body">Presents a sizing menu (from docs.itential.com): <strong>Minimum</strong> — 4 vCPU / 16 GB RAM / <code>m5a.xlarge</code> (dev/test); <strong>Production</strong> — 16 vCPU / 32 GB RAM / <code>c6a.4xlarge</code> (load testing). Grade drives replica count and resource requests in the Helm values file. Both grades support 1 Platform pod per node in separate AZs (StatefulSet).</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">2.k8s.1 — EKS cluster</div>
+        <div class="rule-body">Checks for an existing cluster via <code>kubectl cluster-info</code>. If none: offers to provision a new EKS cluster using <code>eksctl</code> (or AWS CLI fallback). Generates an <code>eksctl</code> ClusterConfig YAML with managed node group, EBS CSI add-on, and AZ distribution — shown for review before running. Cluster creation takes 15–20 minutes and incurs AWS costs. Requires explicit <em>"yes create cluster"</em> confirmation.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">2.k8s.2 — MongoDB</div>
+        <div class="rule-body">Four options: MongoDB Atlas (paste connection string), AWS DocumentDB (provide endpoint), existing on-prem host, or provision a new DocumentDB cluster. Builds <code>MONGO_URL</code> from components and offers to persist to <code>.env</code>. Helm charts do NOT include MongoDB — an external instance is mandatory.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">2.k8s.3 — Redis</div>
+        <div class="rule-body">Three options: AWS ElastiCache (provide endpoint), existing Redis host, or provision a new ElastiCache cluster (shows <code>aws elasticache create-replication-group</code> command before running). Sets <code>REDIS_HOST</code>, <code>REDIS_PORT</code>, and <code>ITENTIAL_REDIS_PASSWORD</code>. Helm charts do NOT include Redis — external required.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">2.k8s.4 — EKS prerequisites</div>
+        <div class="rule-body">Checks and optionally installs: <strong>cert-manager</strong> (required for TLS), <strong>AWS Load Balancer Controller</strong> (requires IRSA IAM role — <code>EKS_LBC_ROLE_ARN</code> in <code>.env</code>), <strong>EBS CSI driver</strong> (<code>ebs.csi.aws.com</code> provisioner — do NOT use EFS/NFS), and <strong>ExternalDNS</strong> (optional). Each component shows its install command and requires "yes / skip" approval. Prints a preflight summary table before proceeding to Step 5.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">Step 5b — secrets (K8s)</div>
+        <div class="rule-body">Creates <code>itential-platform-secrets</code>, <code>itential-ca</code>, and <code>itential-gateway-secrets</code> (IAG5 only). Pre-populated from <code>.env</code> vars set in Steps 2.k8s.2–2.k8s.3 (MONGO_URL, REDIS_HOST, passwords). Generates <code>ITENTIAL_ENCRYPTION_KEY</code> via <code>openssl rand -hex 32</code> or reads from <code>.env</code>. Each manifest displayed with passwords masked; requires explicit "yes" before applying.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">Step 5c — StorageClass</div>
+        <div class="rule-body">Creates <code>iap-ebs-gp3</code> StorageClass with <code>provisioner: ebs.csi.aws.com</code> if not present. Adapter PersistentVolumes start at 10 GB per Itential docs. <code>WaitForFirstConsumer</code> binding mode required. EFS and NFS are explicitly prohibited by the Itential deployment guide.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">Step 5d — IAP Helm (K8s)</div>
+        <div class="rule-body">Generates a <code>/tmp/iap-values.yaml</code> with: image/tag from ECR, replica count from grade, resource requests (2–4 CPU / 4–16 GB minimum; 16 CPU / 32 GB production), external MongoDB/Redis URLs, and ALB ingress annotations. ALB annotations (from docs.itential.com): health check path <code>/health/status?exclude-service=true</code>, port 3443, WebSocket path <code>/ws</code>, stickiness 3600s, SSL policy TLS 1.3. Values file shown before dry-run; dry-run shown before apply. Requires explicit "yes" at each gate. ACM certificate ARN collected if <code>K8S_HOSTNAME</code> is set.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">Step 5g — Ingress</div>
+        <div class="rule-body">Checks ALB provisioning status (<code>kubectl get ingress -o wide</code>). Troubleshoots common ALB failures: IAM permissions, ACM cert ARN, subnet tagging (<code>kubernetes.io/role/elb: 1</code>), pod readiness. NGINX ingress path also supported (annotations differ). Skip for port-forward-only repro sessions.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">Step 5h — Adapter delivery</div>
+        <div class="rule-body">Two methods: <strong>Persistent Volumes (PV)</strong> — adapters installed into a 10 GB EBS volume per pod via <code>kubectl exec npm install</code>, no image rebuild needed (recommended for repro); <strong>Layered containers</strong> — adapters baked into a custom Docker image on top of the platform base, pushed to ECR (recommended for production stability). Selection shown before any action; ECR push requires explicit engineer approval.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">EC2 provisioning (Docker-on-VM)</div>
+        <div class="rule-body">If no existing VM: auto-detects latest Rocky Linux 9 AMI, presents instance type menu, reads SG and subnet from <code>.env</code>, shows <code>aws ec2 run-instances</code> command before running, waits for running state. Docker Engine installed via <code>dnf</code> automatically on fresh EC2.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">Cleanup safety</div>
+        <div class="rule-body">Docker: <code>make down</code> (safe) vs. <code>make clean</code> (destroys MongoDB volumes — requires typing confirmation phrase). K8s namespace deletion requires explicit approval. EC2 termination requires typing <code>yes terminate {INSTANCE_ID}</code>. EKS cluster deletion: not automated — engineer runs <code>eksctl delete cluster</code> manually.</div>
+      </div>
+    </div>
+
+    <div class="table-wrap" style="margin-top:16px;">
+      <table>
+        <thead><tr><th>Path</th><th>Key steps</th><th>Time estimate</th></tr></thead>
+        <tbody>
+          <tr><td>Docker local</td><td>0 → 1 → 2 → 3 → 4</td><td>~5 min</td></tr>
+          <tr><td>Docker on existing VM</td><td>0 → 1 → 2 (existing) → 3 → 4</td><td>~10 min</td></tr>
+          <tr><td>Docker on new EC2</td><td>0 → 1 → 2.vm (EC2 provision) → 3 (Docker install) → 4</td><td>~15–20 min</td></tr>
+          <tr><td>K8s — existing cluster</td><td>0 → 1 → 2.k8s.0–2.k8s.4 → 5a–5f</td><td>~20–30 min</td></tr>
+          <tr><td>K8s — new EKS cluster (min)</td><td>0 → 1 → 2.k8s.0–2.k8s.4 (EKS provision) → 5a–5f</td><td>~35–45 min</td></tr>
+          <tr><td>K8s — new EKS cluster (prod)</td><td>same as above</td><td>~40–50 min</td></tr>
+          <tr><td>K8s + ALB ingress</td><td>…5f → 5g</td><td>+5–10 min (ALB provisioning)</td></tr>
+          <tr><td>K8s + adapter PV</td><td>…5f → 5h (PV option)</td><td>+5 min</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="table-wrap" style="margin-top:12px;">
+      <table>
+        <thead><tr><th>Grade</th><th>AWS instance</th><th>vCPU</th><th>RAM</th><th>Use case</th></tr></thead>
+        <tbody>
+          <tr><td>Minimum</td><td><code>m5a.xlarge</code></td><td>4</td><td>16 GB</td><td>Dev / test / reproduction</td></tr>
+          <tr><td>Production</td><td><code>c6a.4xlarge</code></td><td>16</td><td>32 GB</td><td>Customer-similar load testing</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── /sync-vendor-skills ─────────────────────────────── -->
+  <div class="section">
+    <h2 id="sk-sync-vendor">&#9632; /sync-vendor-skills — Post-Sync Extension Repair</h2>
+    <p class="desc">Run after <code>scripts/sync-platform-skills.sh</code> when the post-sync validator (<code>scripts/validate-extensions.py</code>) detects issues with <code>LOCAL-EXTENSIONS.md</code> files. Reads the validation report, diffs old vs. new vendor step content, drafts specific label fixes and content merges, and applies them with engineer approval — so extensions stay aligned with updated vendor skills without being rewritten from scratch.</p>
+
+    <div class="cards" style="margin-bottom:24px;">
+      <div class="card t-red">
+        <div class="icon">CR</div>
+        <h3>🔴 CRITICAL — Broken Anchor</h3>
+        <p>An <code>[OVERRIDE]</code> or <code>[INSERT AFTER]</code> label targets a step that was renamed or removed in the updated vendor SKILL.md. The extension section has <strong>no effect</strong> until repaired. The skill finds the closest renamed step and proposes a label update.</p>
+      </div>
+      <div class="card t-orange">
+        <div class="icon">MD</div>
+        <h3>🟠 MODIFIED — Stale Override</h3>
+        <p>Vendor step content changed between old and new sync (detected by SHA1 content hash diff). The override still applies (anchor exists) but may miss vendor improvements. Shows a unified diff; engineer chooses keep / merge / skip.</p>
+      </div>
+      <div class="card t-olive">
+        <div class="icon">NW</div>
+        <h3>🟡 NEW — Uncovered Step</h3>
+        <p>Vendor added a new step with no <code>LOCAL-EXTENSIONS.md</code> coverage. Not necessarily a problem — vendor step runs as-is unless local customization is needed. Shows full step content; engineer chooses skip / override / insert-before / insert-after.</p>
+      </div>
+    </div>
+
+    <div class="rule-list">
+      <div class="rule-item">
+        <div class="rule-label">When it runs</div>
+        <div class="rule-body"><code>scripts/sync-platform-skills.sh</code> automatically calls <code>scripts/validate-extensions.py</code> after each sync for any changed skill that has a <code>LOCAL-EXTENSIONS.md</code>. Prints ✅ / ⚠️ / 🔴 per skill. If issues are found, it prompts: <em>"Run '/sync-vendor-skills' in Claude Code to repair them."</em></div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">How to invoke</div>
+        <div class="rule-body"><code>/sync-vendor-skills</code> — review all skills with validation reports. <code>/sync-vendor-skills themis-aws-deploy</code> — review one skill only. <code>/sync-vendor-skills --report-only</code> — regenerate and print the report without applying any fixes.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">Validator mechanics</div>
+        <div class="rule-body"><code>scripts/validate-extensions.py</code> uses <code>git show HEAD:.claude/skills/{name}/SKILL.md</code> to get the pre-sync version for comparison. Detects anchor existence (CRITICAL), SHA1 content hash changes (MODIFIED), and new steps absent from the old version (NEW). Exit codes: 0 = clean, 1 = warnings, 2 = critical.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">Approval gates</div>
+        <div class="rule-body">Every fix is presented as a diff of <code>LOCAL-EXTENSIONS.md</code> before writing. For CRITICAL: shows old label → proposed new label. For MODIFIED: shows vendor diff + engineer's current override + draft merged content. For NEW: shows full new vendor step + draft extension section. Nothing is written without explicit engineer "yes".</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">After applying fixes</div>
+        <div class="rule-body">Re-runs the validator to confirm clean. Stages <code>LOCAL-EXTENSIONS.md</code> with <code>git add</code>. Prints a recommended commit message. Does NOT auto-commit — engineer commits together with the vendor SKILL.md changes.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">Safety rule</div>
+        <div class="rule-body">Only modifies <code>LOCAL-EXTENSIONS.md</code> files — never the vendor <code>SKILL.md</code> itself. Never removes existing extension sections without explicit engineer confirmation — they may contain site-specific overrides that are still correct even if the validator flagged them.</div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- /troubleshoot-oss -->
+  <div class="section">
+    <h2 id="sk-oss">&#9632; /troubleshoot-oss — Open-Source Itential Tools</h2>
+    <p class="desc">Diagnoses ISD and IPSO tickets about open-source Itential tools hosted at <span class="inline-code">github.com/itential</span>. Uses the GitHub public API (no authentication required) to correlate the customer's error with known issues, changelog fixes, and configuration requirements. Auto-detected from ticket signals; wired into Phase 2 routing when triage stamps <span class="inline-code">Component: OSS-Tool</span>.</p>
+
+    <div class="card-grid">
+      <div class="card t-purple">
+        <div class="card-title">Itential Deployer</div>
+        <div class="card-sub"><code>itential/itential.deployer</code></div>
+        <div class="card-body">Ansible collection for deploying IAP &amp; IAG on VMs. Ticket signals: "FAILED!" + Ansible task name, <code>become</code> privilege errors, JFrog RPM install failures, playbook UNREACHABLE.</div>
+      </div>
+      <div class="card t-magenta">
+        <div class="card-title">Helm Charts</div>
+        <div class="card-sub"><code>iap-helm / iag5-helm / iag4-helm</code></div>
+        <div class="card-body">Kubernetes Helm charts for IAP and IAG. Ticket signals: <code>helm install</code> / <code>helm upgrade</code> failures, ImagePullBackOff, PVC Pending, CrashLoopBackOff on IAP/IAG pods.</div>
+      </div>
+      <div class="card t-orange">
+        <div class="card-title">Job Archiver</div>
+        <div class="card-sub"><code>itential/job-archiver</code></div>
+        <div class="card-body">Job retention and archival service. Ticket signals: "job archiver", "archiver crash", jobs not archived, OOM on archiver process.</div>
+      </div>
+      <div class="card t-blue">
+        <div class="card-title">IPCTL</div>
+        <div class="card-sub"><code>itential/ipctl</code></div>
+        <div class="card-body">IAP command-line control tool. Ticket signals: "ipctl", CLI command failure, <code>command not found: ipctl</code>, 401 from IAP on CLI calls.</div>
+      </div>
+      <div class="card t-red">
+        <div class="card-title">itential-MCP</div>
+        <div class="card-sub"><code>itential/itential-mcp</code></div>
+        <div class="card-body">MCP server exposing IAP tools to Claude and other AI agents. Ticket signals: "MCP server", "tool not found", "tool call fail", Claude integration errors.</div>
+      </div>
+      <div class="card t-olive">
+        <div class="card-title">itential-dev-stack</div>
+        <div class="card-sub"><code>itential/itential-dev-stack</code></div>
+        <div class="card-body">Docker Compose local development environment. Ticket signals: "dev stack", <code>make setup</code> / <code>make up</code> failures, unhealthy containers, ECR login issues.</div>
+      </div>
+    </div>
+
+    <div class="rule-list" style="margin-top:20px;">
+      <div class="rule-item">
+        <div class="rule-label">Detection</div>
+        <div class="rule-body">Triage Step 1b auto-detects OSS tool signals (e.g. "FAILED!" + Ansible, "helm install", "ipctl", "job archiver") and writes <code>Component: OSS-Tool</code> + <code>OSS Tool: {name}</code> + <code>OSS Version: {version}</code> to <code>ticket_context.md</code>. Phase 2 routing then invokes <code>/troubleshoot-oss</code>. Can also be invoked directly: <code>/troubleshoot-oss deployer</code> or <code>/troubleshoot-oss --list</code>.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">GitHub baseline (Phase 1)</div>
+        <div class="rule-body">Fetches README (minimum version requirements, config prerequisites), latest releases (computes <em>releases behind</em>), and CHANGELOG (bug-fix entries between customer version and latest). All GitHub API calls are unauthenticated GET requests — no token needed. Source code is never saved; only derived facts are recorded.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">Issue correlation (Phase 2)</div>
+        <div class="rule-body">Searches <code>api.github.com/search/issues</code> for the customer's error string (cleaned: UUIDs / IPs / hostnames stripped) in both open and closed issues on the tool's repo. Classifies as <strong>KNOWN_BUG — open</strong> (link to issue, draft ISD internal comment), <strong>KNOWN_BUG — fixed in vX.Y.Z</strong> (advise upgrade), <strong>WONT_FIX</strong>, or <strong>NO_MATCH</strong> (continue to tool-specific diagnostics).</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">Tool-specific diagnostics (Phase 3)</div>
+        <div class="rule-body">Each tool has a dedicated branch: <strong>Deployer</strong> — checks required Ansible variables, privilege escalation setup, RPM URL patterns, Ansible version constraint; <strong>Helm</strong> — extracts <code>existingSecret</code> names, StorageClass, <code>kubeVersion</code>, resource requests; <strong>Job Archiver</strong> — IAP connectivity, batch_size OOM risk; <strong>IPCTL</strong> — config file, auth method, PATH; <strong>MCP</strong> — available tool list from repo, required env vars; <strong>dev-stack</strong> — required <code>.env</code> keys, Docker Compose version.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">Escalation paths (Phase 4)</div>
+        <div class="rule-body">KNOWN_BUG open → draft ISD internal comment with GitHub URL (requires engineer "yes" to post). Fixed in newer version → draft upgrade recommendation. No issue found + reproducible → drafts a GitHub issue (title + body pre-filled from ticket context) and asks engineer before opening. IPSO tickets → GitHub findings added to the ENG ticket draft.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">Safety rules</div>
+        <div class="rule-body">GitHub API calls are GET-only — the skill never creates or modifies GitHub content without explicit engineer approval and a displayed draft. Source code fetched from GitHub is analyzed in-memory only; only config key names, version strings, and error summaries are saved. <code>make clean</code> on the dev-stack path requires explicit engineer confirmation (same rule as <code>/deploy-containers</code>).</div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- Platform Skills Reference -->
+  <div class="section">
+    <h2 id="sk-platform">Platform Skills — Deep-Diagnostic Library</h2>
+    <p class="desc">Five operational skills vendored from <span class="inline-code">platform-claude-skills</span> (private GitLab). Requires <span class="inline-code">GITLAB_TOKEN</span> in <span class="inline-code">.env</span> and an initial <span class="inline-code">scripts/sync-platform-skills.sh</span> run. See Admin Guide → Vendor Sync for setup.</p>
+
+    <div class="warning" style="margin-bottom:16px;"><strong>Credential model:</strong> These five skills authenticate via <strong>HashiCorp Vault + <code>vault-env.sh</code></strong>, not from the main <code>.env</code> file. They are designed for PE-managed environments (perflab, production support). Each skill reads <code>environments/&lt;env-name&gt;/CLAUDE.md</code> for cluster topology. See <strong>Admin Guide → Operational Skills Setup</strong> for the full setup walkthrough.</div>
+
+    <h3 style="margin-top:20px;">/mongodb — MongoDB Life Report</h3>
+    <p class="desc" style="margin-bottom:8px;">Produces a scored HEALTHY / DEGRADED / CRITICAL life report for a MongoDB cluster. Invoke after <span class="inline-code">/troubleshoot-databases</span> surfaces replica or pool saturation issues.</p>
+    <div class="rules">
+      <div class="rule"><div class="rule-text"><strong>Prerequisites:</strong> <code>vault-env.sh</code> with <code>VAULT_TOKEN</code>; <code>environments/&lt;env-name&gt;/CLAUDE.md</code> with <code>MONGO_NODES</code>, <code>MONGO_PORT</code>, <code>MONGO_RS</code>, <code>PLATFORM_VAULT_PATH</code>, <code>MONGO_SSH_USER</code>; SSH key in Claude memory as <code>ssh_key_path</code></div></div>
+      <div class="rule"><div class="rule-text"><strong>Vault keys read:</strong> <code>mongoDbAdmin</code> (admin password), <code>mongoDb</code> (app password) from <code>PLATFORM_VAULT_PATH</code></div></div>
+      <div class="rule"><div class="rule-text"><strong>Report covers:</strong> replica set topology, oplog window, connection pool, slow operations, index gaps, disk usage</div></div>
+      <div class="rule"><div class="rule-text"><strong>Air-gapped environments:</strong> use companion scripts <span class="inline-code">.claude/skills/mongodb/offline-collect-cluster.sh</span> and <span class="inline-code">offline-collect-node.sh</span> to gather data offline; see <span class="inline-code">OFFLINE-COLLECTION.md</span> for the full workflow</div></div>
+      <div class="rule"><div class="rule-text"><strong>When to invoke:</strong> replica member not PRIMARY/RECOVERING, pool saturation &gt;80%, elections detected, engineer requests scored assessment</div></div>
+    </div>
+
+    <h3 style="margin-top:20px;">/redis — Redis Life Report</h3>
+    <p class="desc" style="margin-bottom:8px;">Produces a scored HEALTHY / DEGRADED / CRITICAL life report for a Redis instance or Sentinel cluster.</p>
+    <div class="rules">
+      <div class="rule"><div class="rule-text"><strong>Prerequisites:</strong> <code>vault-env.sh</code> with <code>VAULT_TOKEN</code>; <code>environments/&lt;env-name&gt;/CLAUDE.md</code> with <code>REDIS_NODES</code>, <code>REDIS_PORT</code>, <code>REDIS_MODE</code>, <code>SENTINEL_PORT</code>, <code>SENTINEL_MASTER</code>, <code>PLATFORM_VAULT_PATH</code>, <code>REDIS_SSH_USER</code>; SSH key in Claude memory</div></div>
+      <div class="rule"><div class="rule-text"><strong>Vault keys read:</strong> <code>redisAdmin</code>, <code>redisPassword</code>, <code>redisSentinelAdmin</code>, <code>redisSentinelPassword</code> from <code>PLATFORM_VAULT_PATH</code></div></div>
+      <div class="rule"><div class="rule-text"><strong>Report covers:</strong> Sentinel topology, memory utilization, keyspace hit ratio, slow log, persistence state (RDB/AOF), blocked_clients</div></div>
+      <div class="rule"><div class="rule-text"><strong>When to invoke:</strong> memory used &gt;80% of maxmemory, evicted_keys &gt;0, sentinel topology issues, persistent blocked_clients</div></div>
+    </div>
+
+    <h3 style="margin-top:20px;">/prometheus — Metrics Query</h3>
+    <p class="desc" style="margin-bottom:8px;">Executes PromQL range queries scoped to the incident time window from <span class="inline-code">ticket_context.md</span>.</p>
+    <div class="rules">
+      <div class="rule"><div class="rule-text"><strong>Prerequisites:</strong> <code>environments/&lt;env-name&gt;/CLAUDE.md</code> with <code>PROMETHEUS_HOST</code>, <code>PROMETHEUS_PORT</code>, <code>PROMETHEUS_AUTH</code>. When <code>PROMETHEUS_AUTH=bearer</code> or <code>basic</code>: also <code>vault-env.sh</code> with <code>VAULT_TOKEN</code> and <code>PLATFORM_VAULT_PATH</code></div></div>
+      <div class="rule"><div class="rule-text"><strong>Capabilities:</strong> firing alerts, ad-hoc PromQL, CPU/heap/task-rate stat tables, TSDB cardinality report</div></div>
+      <div class="rule"><div class="rule-text"><strong>When to invoke:</strong> sustained high CPU, node nearing OOM, container restarts correlating with resource pressure, or when you need time-series confirmation of a trend seen in infra diagnostics</div></div>
+    </div>
+
+    <h3 style="margin-top:20px;">/itential-platform — IAP Admin</h3>
+    <p class="desc" style="margin-bottom:8px;">Deep administrative view of IAP — complements <span class="inline-code">/troubleshoot-jobs</span> for worker-level visibility.</p>
+    <div class="rules">
+      <div class="rule"><div class="rule-text"><strong>Prerequisites:</strong> <code>vault-env.sh</code> with <code>VAULT_TOKEN</code>; <code>environments/&lt;env-name&gt;/CLAUDE.md</code> with <code>IAP_HOST</code>, <code>IAP_PORT</code>, <code>IAP_NODES</code>, <code>SA_VAULT_PATH</code>, <code>SA_CLIENT_ID_KEY</code>, <code>SA_CLIENT_SECRET_KEY</code>, <code>IAP_SSH_USER</code>, <code>AUTH_METHOD</code>; SSH key in Claude memory</div></div>
+      <div class="rule"><div class="rule-text"><strong>Vault keys read:</strong> OAuth client_id and client_secret from <code>SA_VAULT_PATH</code> using <code>SA_CLIENT_ID_KEY</code>/<code>SA_CLIENT_SECRET_KEY</code></div></div>
+      <div class="rule"><div class="rule-text"><strong>Capabilities:</strong> process health, adapter / application / integration list, job worker control (pause/resume), active job queue depth</div></div>
+    </div>
+
+    <h3 style="margin-top:20px;">/itential-gateway — IAG Admin</h3>
+    <p class="desc" style="margin-bottom:8px;">IAG health, logs, and service management — complements the inline IAG diagnostics in the orchestrator.</p>
+    <div class="rules">
+      <div class="rule"><div class="rule-text"><strong>Prerequisites:</strong> <code>vault-env.sh</code> with <code>VAULT_TOKEN</code>; <code>environments/&lt;env-name&gt;/CLAUDE.md</code> with <code>IAG_HOST</code>, <code>IAG_PORT</code>, <code>PLATFORM_VAULT_PATH</code>, <code>IAG_ADMIN_USER</code>, <code>IAG_ADMIN_PASSWORD_KEY</code>, <code>IAG_SSH_USER</code>, <code>IAG_BACKEND</code>; SSH key in Claude memory</div></div>
+      <div class="rule"><div class="rule-text"><strong>Vault keys read:</strong> IAG admin password from <code>PLATFORM_VAULT_PATH</code> key named by <code>IAG_ADMIN_PASSWORD_KEY</code></div></div>
+      <div class="rule"><div class="rule-text"><strong>Capabilities:</strong> IAG health endpoint, recent log tail, service list, etcd cluster membership and leader election state</div></div>
+    </div>
   </div>
 
 </div><!-- /tab-subskills -->
@@ -2836,6 +5288,83 @@ SSH_ROLE_1=iap</pre></div>
       fontSize: '13px'
     }
   });
+</script>
+
+<script>
+/* ── Copy buttons: wired onto every .code-block and every .arch-pane ── */
+(function () {
+  var ICON_COPY = '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="4" y="4" width="9" height="11" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M3 11H2.5A1.5 1.5 0 0 1 1 9.5v-7A1.5 1.5 0 0 1 2.5 1h7A1.5 1.5 0 0 1 11 2.5V3" stroke="currentColor" stroke-width="1.4"/></svg>';
+  var ICON_CHECK = '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M2.5 8.5 6.5 12.5 13.5 4" stroke="#86efac" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  function plainText(el) {
+    /* Walk the subtree and collect text, skipping .prompt spans (non-copyable prompts) */
+    var parts = [];
+    (function walk(node) {
+      if (node.nodeType === 3) { parts.push(node.nodeValue); return; }
+      if (node.nodeType === 1) {
+        if (node.classList && node.classList.contains('prompt')) return;
+        node.childNodes.forEach(walk);
+      }
+    }(el));
+    return parts.join('').trimEnd();
+  }
+
+  function makeBtn(targetEl) {
+    var btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.setAttribute('aria-label', 'Copy to clipboard');
+    btn.innerHTML = ICON_COPY + '<span>Copy</span>';
+    var timer;
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var text = plainText(targetEl);
+      navigator.clipboard.writeText(text).then(function () {
+        btn.classList.add('copied');
+        btn.innerHTML = ICON_CHECK + '<span>Copied!</span>';
+        clearTimeout(timer);
+        timer = setTimeout(function () {
+          btn.classList.remove('copied');
+          btn.innerHTML = ICON_COPY + '<span>Copy</span>';
+        }, 2000);
+      }).catch(function () {
+        /* Fallback for non-https or blocked clipboard */
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        btn.classList.add('copied');
+        btn.innerHTML = ICON_CHECK + '<span>Copied!</span>';
+        clearTimeout(timer);
+        timer = setTimeout(function () {
+          btn.classList.remove('copied');
+          btn.innerHTML = ICON_COPY + '<span>Copy</span>';
+        }, 2000);
+      });
+    });
+    return btn;
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    /* .code-block divs — copy the <pre> content */
+    document.querySelectorAll('.code-block').forEach(function (block) {
+      var pre = block.querySelector('pre');
+      if (!pre) return;
+      var btn = makeBtn(pre);
+      block.appendChild(btn);
+    });
+
+    /* .arch-pane divs — copy the <pre> content (the override block) */
+    document.querySelectorAll('.arch-pane').forEach(function (pane) {
+      var pre = pane.querySelector('pre');
+      if (!pre) return;
+      var btn = makeBtn(pre);
+      pane.appendChild(btn);
+    });
+  });
+}());
 </script>
 </body>
 </html>

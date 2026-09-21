@@ -8,6 +8,74 @@ This file captures confirmed resolution patterns from ISD ticket investigations.
 
 ---
 
+### [ISD-9600] Platform write-path Redis client never recovers from a silently-dead connection after Sentinel failover
+
+| Field | Value |
+|-------|-------|
+| **Ticket** | ISD-9600 (Lumen Technologies, Critical) |
+| **Type** | Escalated to Engineering — root cause confirmed, fix not yet implemented (ENG ticket drafted, pending filing approval) |
+| **Component** | IAP Platform — `core/startup/Redis.js` (write-path Redis client, via `RedisWrapper.js`) |
+| **Platform** | IAP 6.5.2, on-prem, 3-node Redis Sentinel HA, TLS enabled |
+| **Severity** | S1 — production outage requiring manual restart; systemd shows service `active` throughout, masking the outage from standard monitoring |
+
+**Symptom:** After a Redis Sentinel failover, `/health/status` goes to empty `{}` on all Platform
+nodes and stays there — `itential-platform` remains `active` in systemd, but the app never
+reconnects to Redis until manually restarted. Logs show `core/startup/Redis.js` repeating
+`Error: Command timed out` / `Retrying Redis write: attempt N` against the OLD master address,
+with `All sentinels are unreachable` logged once and no further Sentinel-rediscovery attempts.
+
+**Root Cause:** Platform has ≥2 independent Redis client instances. `Service/Initialization/Redis.js`
+correctly re-resolves the master via Sentinel on any connection-close event.
+`core/startup/Redis.js` only does so on an **explicit socket-close event** — if the old master's
+connection dies *silently* (no TCP RST/FIN), this client has no way to detect the dead peer and
+just retries the same stale socket forever.
+
+**Reproduction:** `systemctl stop redis` on the master (clean TCP RST) does NOT reproduce it —
+Platform self-heals in ~11s. `kill -STOP` on the master's `redis-server` process (freezes the
+process, leaves the socket open, no RST/FIN) DOES reproduce it — confirmed stable/non-recovering
+over 6+ minutes; only resolves ~1.5s after `kill -CONT` lets the frozen peer finally close the
+socket. Full steps: `data/2026-09-16T17-20-09/ISD-9600/manual-test-guide-saptarshi.md`.
+
+**Confirmatory finding — ENG-20713 (already released in 6.5.2) does not fix this:** ENG-20713
+added `redis_command_timeout` / `redis_sentinel_command_timeout` / `redis_keep_alive` config
+properties. Setting `redis_command_timeout` to its schema minimum (1000ms) only shortens the
+failed-retry cadence (~3s vs. default ~61s) — the client still never recovers on its own. The gap
+is architectural: nothing calls disconnect-and-re-resolve-via-Sentinel on a detected timeout.
+
+**Real-world equivalents of the lab's `kill -STOP` trigger** (i.e., what actually causes a
+"silent death" connection in production, since SIGSTOP itself is not expected in the wild):
+network partition / packet blackhole (firewall or routing silently dropping packets — this is the
+scenario in ENG-20713's own original report, and the likely cause of Lumen's "unplanned reboot"
+incident too), full hypervisor-level VM freeze (live migration, CPU steal/starvation, hung kernel
+panic), cgroup/container freeze (`docker pause`, k8s freezer, freeze-snapshot-thaw backup tooling),
+ptrace/debugger attach to `redis-server`, and severe storage stalls that wedge the kernel itself.
+Note SIGSTOP only freezes the process — the kernel still answers TCP keepalive probes — so a full
+hypervisor/kernel freeze is actually a *closer* real-world analog for total silence than SIGSTOP.
+
+**Workaround:** Manual restart of `itential-platform` on all nodes (confirmed effective, matches
+customer's own workaround). Mitigations that narrow but don't close the gap: lower
+`redis_command_timeout` for faster failure detection/alerting; ensure `redis_keep_alive` is set
+(helps only for the network-partition sub-case, not for a full peer-kernel freeze); add an
+external health-check-based auto-restart on `/health/status` returning `{}`.
+
+**Engineering escalation:** Draft ENG ticket at
+`data/2026-09-16T17-20-09/ISD-9600/eng_ticket_draft.md` — recommends applying the same
+disconnect-and-re-resolve-via-Sentinel pattern already used in `Service/Initialization/Redis.js`
+(and the `failoverDetector` pattern already used for `EventSystem` per ENG-23310) to
+`core/startup/Redis.js`. **Not yet filed — pending engineer approval.**
+
+**Detection Hints (for future similar tickets):** If a customer reports "Redis/Sentinel failover
+happened, cluster is healthy, but Platform stayed broken until we restarted it, and systemd showed
+the service as active the whole time" — check `journalctl -u itential-platform` for
+`core/startup/Redis.js` `Command timed out` / `Retrying Redis write` loops. Ask whether the master
+failure was a clean stop/crash (RST sent) or something silent (network blackhole, host freeze,
+frozen VM) — only the latter reproduces this defect.
+
+**Verification:** No platform-side fix exists yet; workarounds above are mitigation only pending
+the ENG fix.
+
+---
+
 ### [ISD-9288] itenProngAppDown / itenProngAppCrash SNMP traps never sent
 
 | Field | Value |
@@ -407,3 +475,45 @@ Use `GET /operations-manager/jobs/{id}` (single-job-by-ID) for each job of inter
 **Verification:**
 No platform-side fix. Confirm workarounds work for the customer's use case by testing `GET /operations-manager/jobs/{id}` and client-side `parent.job` filtering against their job set.
 
+
+---
+
+### [ISD-9544] IAG local admin locked out — no SMTP configured for self-service password reset
+
+| Field | Value |
+|-------|-------|
+| **Ticket** | ISD-9544 |
+| **ENG Bug** | N/A |
+| **Component** | IAG — Local AAA / admin account access |
+| **Platform Version** | IAG 2023.1 / 4.x line (confirmed) |
+| **Severity** | S4 — single admin account locked out, no broader outage |
+
+**Symptom:**
+Admin locked out of the IAG web GUI. The documented email-based self-service password reset (docs.itential.com/itential-gateway/4/local-password-reset) does not deliver a reset email because SMTP is not configured on the on-prem instance. Customer has SSH access to the IAG host but no other recovery path.
+
+**Root Cause:**
+IAG's local AAA store is a SQLite database at `/var/lib/automation-gateway/automation-gateway.db`. The self-service reset flow depends on SMTP being configured to deliver the reset email; when SMTP isn't configured (common on on-prem installs without a mail relay), the flow silently produces no email and no error, leaving the customer unable to regain access. Confirmed by: customer applied the CLI workaround below and regained access successfully.
+
+**Detection Hints:**
+- Customer reports "no reset email arrives" after following the documented self-service reset docs
+- Customer has SSH/CLI access to the IAG host but not the GUI
+- Worth asking about SMTP configuration proactively before assuming an application bug
+
+**Workaround (immediate):**
+Reset the local admin password hash directly via SQLite CLI (tested on RHEL 8.10, IAG 2023.1/4.x line):
+```
+yum install sqlite -y
+cd /var/lib/automation-gateway
+sqlite3 automation-gateway.db
+
+-- Backup current hash first
+SELECT password_hash FROM account WHERE name = "admin@itential";
+
+-- Set a temporary known password hash (pbkdf2:sha512 format)
+UPDATE account SET password_hash = '<pbkdf2:sha512:...>' WHERE name = "admin@itential";
+```
+No service restart required — the account table is checked on next login attempt.
+
+**Verification:**
+1. Customer logs into the IAG GUI with the temporary password
+2. Customer is prompted/able to set a new permanent password after login
