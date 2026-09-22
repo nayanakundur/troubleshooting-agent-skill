@@ -282,6 +282,7 @@ Released: **2026-05-13** (on-prem) / **2026-05-21** (cloud)
 |--------|-----------|-------------|--------|
 | **ENG-16911** | Automation Studio UI | Child job / transformation opens in new browser window instead of Studio tab | Backlog, no fix version |
 | **ISD-9261** | Automation Studio UI — childJob task panel | "Enable query" throws `TypeError: Cannot set properties of undefined (setting 'childJobLoopIndex')` on childJob tasks only; all other task types unaffected | No ENG bug filed yet; affects Platform 6.4.0 GA; confirmed repro by Ahmed Al-Zubidy |
+| **ENG-27979** | Adapter — `@itentialopensource/adapter-utils` (`scrubSensitiveInfo`, shared lib) | Debug-log `FULL BODY` line silently drops `&` separators between form-encoded fields when none of the field names match the hardcoded sensitive-word list (e.g., adapters that rename fields via `external_name` to values like `credential_0`/`credential_1`). Confirmed via source tracing (adapter-utils v7.0.6) to be a **logging-only artifact** — does not affect the actual outbound wire request. Was initially suspected as the root cause of an AirWave adapter HTTP 403 (ISD-9593) but **confirmed not to be** — that 403 was actually caused by an AirWave account/role misconfiguration plus a blank `auth_request_datatype` sending an empty request body; see known-resolutions.md. | Backlog, no fix version — confirmed logging-only defect (surfaced via ISD-9593) |
 
 ---
 
@@ -309,6 +310,7 @@ Released: **2026-05-13** (on-prem) / **2026-05-21** (cloud)
 | Version Range | Component | What Applies | What Does NOT Apply / Exist | Diagnostic Impact |
 |---|---|---|---|---|
 | 23.2.x | Platform configuration | `services` array per profile in platform config controls which services start for that profile | `/etc/platform/properties` — this file does not exist in 23.2 deployments | Do not look for, reference, or attempt to read `/etc/platform/properties` when diagnosing 23.2 systems; use the platform config API (`GET /api/v2.0/platform/config`) to inspect service and profile settings instead |
+| 6.5.1 (range unconfirmed — needs broader verification) | Adapter settings — `auth_request_datatype` (request_token / two-step-token auth) | Setting `auth_request_datatype` explicitly (e.g., `URLENCODE`) correctly builds and sends the token request body | Leaving `auth_request_datatype` blank does NOT reliably fall back to the adapter's `action.json`-level `requestDatatype` for the actual outbound body — confirmed via ISD-9593, where a blank value resulted in an empty token-request body (`Content-Length: 0`) despite `action.json` declaring `requestDatatype: URLENCODE` | Do not assume a blank `auth_request_datatype` is harmless because a fallback exists elsewhere in the adapter's config — verify the actual outbound request body (packet capture or target-system access log) rather than relying on source-level fallback logic. Set `auth_request_datatype` explicitly for `request_token`/two-step-token auth. |
 
 ## 8. Cloud Deployment Topology (itential-saas)
 
