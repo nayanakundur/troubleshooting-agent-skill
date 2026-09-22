@@ -407,3 +407,44 @@ Use `GET /operations-manager/jobs/{id}` (single-job-by-ID) for each job of inter
 **Verification:**
 No platform-side fix. Confirm workarounds work for the customer's use case by testing `GET /operations-manager/jobs/{id}` and client-side `parent.job` filtering against their job set.
 
+
+---
+
+### [ISD-9593] Aruba AirWave adapter HTTP 403 on token request — AirWave role, empty request body, and field/redirect mismatches
+
+| Field | Value |
+|-------|-------|
+| **Ticket** | ISD-9593 |
+| **ENG Bug** | ENG-27979 (logging defect only — NOT the root cause of the 403; see Root Cause) |
+| **Component** | Adapter (OSS) — `@itentialopensource/adapter-aruba_airwave`, auth settings + AirWave-side role config |
+| **Platform Version** | 6.5.1 (confirmed) |
+| **Severity** | S3 — new adapter integration blocked, single customer, workaround available |
+
+**Symptom:**
+New AirWave adapter instance (`auth_method: request_token`) fails all token/login requests to AirWave's `/LOGIN` endpoint with HTTP 403, returning AirWave's HTML login page instead of a token. Identical credentials succeed when tested manually via Postman/curl. Adapter debug log (`auth_logging: true`) shows the `FULL BODY` line missing `&` separators between form fields (e.g., `credential_0=...credential_1=...destination=...`) — this specific symptom is a known **logging-only artifact** (see ENG-27979) and should not be treated as proof the actual request was malformed.
+
+**Root Cause:**
+Not isolated to a single change — customer applied several corrections together and confirmed the fix without isolating which one resolved it. Contributing factors identified:
+1. The AirWave-side account used by the adapter lacked a role with API access enabled (AirWave's role types are AMP Administrator, Device Manager, AirWave Management Client, Guest Access Sponsor — API access must be explicitly granted via role; a successful AirWave **UI** login does not imply API access).
+2. Adapter's `auth_request_datatype` was blank. Contrary to the initial investigation hypothesis, this did **not** reliably fall back to the adapter's `action.json`-level `requestDatatype: URLENCODE` in practice — the original failing request showed `Content-Length: 0`, i.e., no login body was sent to AirWave at all. Setting `auth_request_datatype` explicitly to `URLENCODE` was one of the changes applied to resolve this.
+3. Adapter's `token_user_field`/`token_password_field` did not match AirWave's expected `/LOGIN` form field names (`credential_0`/`credential_1`) at the adapter-settings level.
+4. `request.number_redirects` was set to `1`; AirWave returns the session cookie and `X-BISCOTTI` header on the initial 302 response itself, so following a redirect was unnecessary and was set to `0`.
+
+Confirmed by: customer's independent curl test from a workstation (POST `/LOGIN` → 302 + session cookie + `X-BISCOTTI` → GET → 200 with data) and from the IAP host via a REST Call task, both outside the adapter, both succeeding after the AirWave-side role/account change combined with the adapter property changes above.
+
+**Detection Hints:**
+- `FULL BODY` debug log line missing `&` separators between token-request fields whose names don't match adapter-utils's hardcoded sensitive-word list — **do not** treat this alone as proof of a malformed wire request (logging artifact, ENG-27979); verify with a packet capture or the target system's own access logs instead.
+- `Content-Length: 0` on the token request (visible via packet capture or target-side access log) — a genuine indicator of an empty request body, distinct from the logging artifact above.
+- Target system returning a full HTML login page (not a JSON error) with HTTP 403 is consistent with a request that never reached credential parsing — check account role/API-access before assuming a request-construction defect.
+- Negative hint: if the same credentials succeed via Postman/curl outside the adapter, this rules out network/credential issues broadly, but does NOT rule out an account role lacking API access specifically for programmatic (vs. UI) access — test both separately.
+
+**Workaround (immediate):**
+1. In AirWave, create/assign a role with explicit API access (e.g., an AMP Administrator role) to the account used by the adapter — do not assume a UI-login-capable account has API access.
+2. Set the adapter's `auth_request_datatype` property explicitly to `URLENCODE` rather than leaving it blank.
+3. Confirm `token_user_field`/`token_password_field` adapter settings match the target system's expected form field names.
+4. Set `request.number_redirects` to `0` for this adapter, since AirWave returns the session cookie on its initial 302 response.
+5. Ignore the `FULL BODY` debug log line's missing `&` separators — known logging artifact (ENG-27979), not indicative of the real request.
+
+**Verification:**
+1. Independently test the account (curl/Postman, and/or a REST Call task from the IAP host) against the login endpoint with the adapter's configured field names — confirm a 302 + session cookie, not a 403/login-page response.
+2. Trigger the adapter's token request and confirm it transitions to Online / a subsequent data call returns valid data rather than erroring.
