@@ -1,0 +1,81 @@
+# ============================================================
+# Themis Run Variables — EXAMPLE / TEMPLATE
+# Copy this file to run-vars.yml and fill in your values.
+# run-vars.yml is gitignored — never commit it.
+# ============================================================
+#
+# Var routing (handled by scripts/apply_run_vars.py):
+#   redis_*     -> redis group_vars
+#   mongodb_*   -> mongodb group_vars
+#   platform_*  -> platform group_vars
+#   gateway_*   -> gateway group_vars
+#   (no prefix) -> group_vars/all
+#
+# Skill-consumed keys (architecture, os, etc.) are NOT
+# forwarded to Ansible — they drive provisioning only.
+#
+# Do NOT set *_pki_src_dir vars here — managed by Step 4b.
+# ============================================================
+
+
+# ---- Run parameters (skill-consumed, not passed to Ansible) ----
+architecture: aio            # aio | minimal | ha2 | asa
+os: rocky9                   # rocky8 | rocky9 | rhel8 | rhel9 | al2023 | oracle9
+themis_root: "<absolute-path-to-themis-repo>"          # e.g. /home/jane/repos/themis
+owner: "<your-itential-username>"                       # AWS resource owner tag (tofu -var owner=)
+deployer_repo: "<absolute-path-to-itential-deployer-checkout>"  # e.g. /home/jane/repos/itential.deployer
+tls_repo: "<absolute-path-to-itential-tls-checkout>"   # e.g. /home/jane/repos/itential.tls
+aws_profile: pe-team-sbx     # AWS CLI profile (default: pe-team-sbx shared sandbox)
+                             # For custom accounts set aws_profile here and add AWS_* overrides to .env
+ssh_key_path: "<absolute-path-to-ssh-private-key>"     # e.g. /home/jane/.ssh/prometheus.pem (chmod 400)
+deployment_scope: full      # full | redis | mongodb | platform | gateway | none
+certify_scope: full         # none | full | redis | mongodb | platform
+artifacts_retention_days: 30
+
+
+# ---- Credentials (forwarded to group_vars/all) ----
+# JFrog auth: leave repository_api_key blank.
+# The skill auto-populates it from JFROG_TOKEN in .env (Step 1a).
+# Do NOT paste a JFrog token here — it would be committed if you ever accidentally
+# track this file (e.g. git add -A on a misconfigured repo).
+repository_api_key: ""       # leave blank — auto-populated from JFROG_TOKEN in .env
+
+
+# ---- TLS (uncomment to override deployer defaults) ----
+# redis_tls_enabled: true
+# mongodb_tls_enabled: true
+# platform_webserver_https_enabled: true
+# gateway_https_enabled: true
+
+
+# ---- Install paths (uncomment to override deployer defaults) ----
+# redis_install_dir: /opt/redis
+# mongodb_install_dir: /opt/mongodb
+# platform_install_dir: /opt/platform
+
+
+# ---- Gateway (uncomment to deploy Gateway/IAG) ----
+# Gateway deploy is skipped automatically (not failed) if gateway_release is unset,
+# even when deployment_scope is full. gateway_whl_file is a local wheel filename,
+# resolved relative to <deployer_repo>/playbooks/files/ by the gateway role.
+# gateway_release: "4.4"
+# gateway_whl_file: automation_gateway-4.4.46-py3-none-any.whl
+
+
+# ---- Platform release (overrides Themis's pinned default of 6 / 6.1.1) ----
+# Replace <VERSION> with the actual platform version, e.g. 6.5.2.
+# Run scripts/pull-platform-rpms.sh --version <VERSION> --list to browse available
+# builds, then paste the confirmed JFrog URLs below.
+# platform_release: 6
+# platform_packages:
+#   - https://itential.jfrog.io/artifactory/PLATFORM/Platform%206/Platform%206.<VERSION>/itential-platform-<VERSION>-1.noarch.rpm
+#   - https://itential.jfrog.io/artifactory/CONFIG/Configuration%20Manager%206/Configuration%20Manager%206.<VERSION>/itential-configuration_manager-<VERSION>-1.noarch.rpm
+#   - https://itential.jfrog.io/artifactory/LIFECYCLE/Lifecycle%20Manager%206/Lifecycle%20Manager%206.<VERSION>/itential-lifecycle_manager-<VERSION>-1.noarch.rpm
+#   - https://itential.jfrog.io/artifactory/SERVICE/Service%20Manager%206/Service%20Manager%206.<VERSION>/itential-service_management-<VERSION>.x86_64.rpm
+#   - https://itential.jfrog.io/artifactory/GATEWAY-MANAGER/GATEWAY-MANAGER/itential-gateway_manager-<GM_VERSION>.noarch.rpm
+
+
+# ---- Any other deployer variable ----
+# Add any itential.deployer variable here using its full name.
+# It will be routed to the correct group_vars by prefix.
+# key: value

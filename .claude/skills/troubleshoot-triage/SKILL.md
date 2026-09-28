@@ -10,9 +10,39 @@ argument-hint: "[TICKET-KEY | --list] [--auto]"
 
 ---
 
+## Phase Progress Display (Required)
+
+At the start of each step and whenever waiting for engineer input, output a visible status line. Engineers must be able to follow triage progress at a glance.
+
+**Step indicator** — output before each named step:
+
+```
+  ── Step 1a: <Step Name> ──────────────────────────────
+```
+
+**Sub-skill / Jira call notice** — output before any Jira or Confluence API call:
+
+```
+  >> Fetching: <what is being fetched>
+```
+
+**Waiting for engineer input**:
+
+```
+  [ACTION REQUIRED]  <what is needed and what happens next>
+```
+
+**Triage complete**:
+
+```
+  [PHASE 1 complete]  Pre-investigation summary written → data/{TIMESTAMP}/{TICKET_KEY}/
+```
+
+---
+
 ## CRITICAL SAFETY RULES
 
-- **All Jira comments must be internal** — always set `commentVisibility: {"type": "role", "value": "Service Desk Team"}` on every `addCommentToJiraIssue` call
+- **All Jira comments must be internal** — ISD (and IPSO) are Jira Service Management (JSM) projects. The classic `visibility: {"type": "role", "value": "Service Desk Team"}` field on `/rest/api/3/issue/{key}/comment` is a **silent no-op on JSM** — it returns HTTP 201 with no error but posts the comment fully public (`jsdPublic: true`). Always post via `POST {JIRA_URL}/rest/servicedeskapi/request/{TICKET_KEY}/comment` with `{"body": "...", "public": false}` instead, and verify by re-fetching the comment and checking `jsdPublic == false`
 - **Never post comments without engineer approval** — present the draft and wait for explicit approval before posting (unless `--auto` flag is active)
 - **Never create ENG tickets without explicit engineer approval** — present the draft and wait (unless `--auto` is active)
 - **Read-only Jira queries only** — no field edits, no transitions, no priority changes without explicit consent
@@ -333,7 +363,11 @@ Parse and save to `{project_path}/data/{TIMESTAMP}/{TICKET_KEY}/ticket_context.m
 
   PROBLEM
   ───────
-  Component:     IAP | IAG | Adapter | MongoDB | Redis | OS | Kafka | unknown
+  Component:     IAP | IAG | Adapter | MongoDB | Redis | OS | Kafka | OSS-Tool | FlowAI | InventoryManager | GatewayManager | unknown
+  OSS Tool:      ← set only when Component = OSS-Tool
+                    itential.deployer | iap-helm | iag5-helm | iag4-helm |
+                    job-archiver | ipctl | itential-mcp | itential-dev-stack | unknown
+  OSS Version:   {version if stated in ticket | unknown}
   Symptom:       {what the customer sees — their words}
   Error Message: {exact error string | "none provided"}
   Job ID:        {if provided | none}
@@ -472,8 +506,13 @@ Save titles, URLs, and key excerpts to `{project_path}/data/{TIMESTAMP}/{TICKET_
 | IAG5 / GatewayManager / IAG ≥ 5.x | IAG Gateway 5 | `site:docs.itential.com/itential-gateway/5` |
 | IAG4 / AGManager / IAG ≤ 4.x | IAG Gateway 4 | `site:docs.itential.com/itential-gateway/4` |
 | OSS adapter (`adapter-*` package, not IAG) | Open-Source Adapters | `site:docs.itential.com/adapters` |
+| OSS tool (deployer, helm, job-archiver, ipctl, MCP, dev-stack) | GitHub README | `WebFetch https://raw.githubusercontent.com/itential/{repo}/main/README.md` |
 | SaaS/cloud customer (`*.itential.io` platform URL) | Itential Cloud | `site:docs.itential.com/itential-cloud` |
 | Cisco NSO / adapter-nso / NSO-related | Cisco NSO | `site:docs.itential.com/cisco-nso` |
+| **FlowAI / agent** — "agent", "agent builder", "agent project", "agent prompt", "agent session", "FlowAI", "FlowMCP", "Model Registry", "runAgent", "LLM profile" | FlowAI | `site:docs.itential.com/itential-platform/6/flowai` |
+| **Inventory Manager** — "inventory manager", "populate inventory", "nodes missing", "node not found", "inventory not populated", "InventoryManager", "iag5-service action" | Inventory Manager | `site:docs.itential.com/itential-platform/6/inventory-manager` |
+| **Gateway Manager** — "gateway manager", "cluster", "mTLS", "GatewayManager", "virtual cluster", "cluster_id", "FlowMCP Gateway" | Gateway Manager | `site:docs.itential.com/itential-gateway/5/gateway-manager` |
+| Device commands on IOS-XR / Cisco / Juniper / NX-OS — "iosxr", "cisco_ios", "netmiko", "command template", "run command", "MOP" | Platform + IAG | `site:docs.itential.com/itential-gateway/5` |
 
 **For each applicable section, run 2–3 targeted searches:**
 
@@ -636,8 +675,8 @@ Produce a tailored checklist. Pre-fill answers already in the ticket; remove ina
 13. [ ] Adapter settings export (if adapter-related)
 ```
 
-**Interactive mode:** Present to engineer and wait for approval before posting as internal ISD comment (`Service Desk Team` visibility).
-**`--auto` mode:** Post directly without waiting.
+**Interactive mode:** Present to engineer and wait for approval before posting as an internal ISD comment via the servicedesk API (`public: false` — see CRITICAL SAFETY RULES above; the classic API's `visibility` block is a no-op on JSM).
+**`--auto` mode:** Post directly without waiting, using the same servicedesk API pattern.
 
 ---
 

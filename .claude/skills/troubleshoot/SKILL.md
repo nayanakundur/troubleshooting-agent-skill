@@ -20,7 +20,68 @@ argument-hint: "[ISD ticket key or brief issue description]"
 | `/troubleshoot-infra` | CPU, memory, disk, FDs, container crashes, EKS, network connectivity |
 | `/troubleshoot-logs` | Log collection from IAP, IAG, MongoDB, Redis, LB — any deployment type |
 
+**Platform skills (from `platform-claude-skills`) — invoke for deep operational diagnostics:**
+
+| Platform Skill | When to invoke |
+|----------------|----------------|
+| `/itential-platform` | Deep IAP admin: adapter list, application status, job worker control (29 tasks) — supplements `/troubleshoot-jobs` when IAP-layer health is suspected |
+| `/itential-gateway` | IAG admin: health, logs, service list, etcd cluster — supplements inline IAG diagnostics when IAG itself (not the adapter) is the issue |
+| `/mongodb` | Full MongoDB replica set life report (scored HEALTHY/DEGRADED/CRITICAL) — invoke after `/troubleshoot-databases` surfaces replica or connection pool issues |
+| `/redis` | Full Redis Sentinel life report (scored HEALTHY/DEGRADED/CRITICAL) — invoke after `/troubleshoot-databases` surfaces eviction, sentinel topology, or persistence issues |
+| `/prometheus` | PromQL-based metrics analysis — invoke alongside `/troubleshoot-infra` when `PROMETHEUS_URL` is available and time-series evidence is needed |
+
+Platform skills require `GITLAB_TOKEN` in `.env` to sync. Run `scripts/sync-platform-skills.sh` to pull them before first use. See the **Platform Skills Staleness Gate** in Phase 2 Step 2b below.
+
 **Never duplicate what a sub-skill already covers.** Invoke the sub-skill and synthesize its output.
+
+---
+
+## Phase Progress Display (Required)
+
+At every phase transition and key sub-step, **output a visible progress banner** before beginning work. Engineers must be able to see exactly where the investigation stands at a glance. This is mandatory — never transition silently between phases.
+
+**Phase entry banner** — output at the start of each phase:
+
+```
+═══════════════════════════════════════════════════════════
+  PHASE X / 7  |  <PHASE NAME>
+  Ticket: {TICKET_KEY}  |  <one-line description of what this phase does>
+═══════════════════════════════════════════════════════════
+```
+
+**Sub-step indicator** — output before each named step within a phase:
+
+```
+  ── Step Xa: <Step Name> ──────────────────────────────
+```
+
+**Sub-skill delegation notice** — output whenever handing off to a specialist sub-skill:
+
+```
+  >> Delegating to /<sub-skill-name>  |  Reason: <why>
+```
+
+**Phase completion line** — output when a phase finishes, before the next begins:
+
+```
+  [PHASE X complete] ──────────────────────────────────────
+```
+
+**Waiting for engineer input** — output whenever the skill pauses for approval or selection (Jira comment, ENG ticket, environment file, etc.):
+
+```
+  [ACTION REQUIRED]  <what is needed and what happens next>
+```
+
+**Investigation complete** — output at end of the final phase:
+
+```
+═══════════════════════════════════════════════════════════
+  INVESTIGATION COMPLETE  |  {TICKET_KEY}  |  All phases done
+═══════════════════════════════════════════════════════════
+```
+
+Apply the same banner pattern when running as a sub-skill (e.g. `/troubleshoot-triage` announces Phase 1, sub-step by sub-step). Sub-skills use the same format with their own step labels.
 
 ---
 
@@ -30,7 +91,7 @@ argument-hint: "[ISD ticket key or brief issue description]"
 - **No MongoDB writes** — read-only queries only
 - **No Redis writes** — no SET, DEL, FLUSHDB
 - **Never post comments to ISD tickets without explicit engineer consent** — present the draft comment and wait for approval before posting
-- **All ISD comments must be internal** — always set `commentVisibility: {"type": "role", "value": "Service Desk Team"}` on every `addCommentToJiraIssue` call. Never post a public/customer-visible comment on ISD tickets
+- **All ISD comments must be internal** — ISD is a Jira Service Management (JSM) project. The classic `visibility: {"type": "role", "value": "Service Desk Team"}` field on `/rest/api/3/issue/{key}/comment` is a **silent no-op on JSM** — it returns HTTP 201 with no error but posts the comment fully public (`jsdPublic: true`). Always post via `POST {JIRA_URL}/rest/servicedeskapi/request/{TICKET_KEY}/comment` with `{"body": "...", "public": false}` instead (see Step 2b for the verified pattern), and verify by re-fetching the comment and checking `jsdPublic == false`. Never post a public/customer-visible comment on ISD tickets
 - **Never create ENG tickets without explicit engineer consent** — present the draft bug report and wait for approval before filing
 - **Never link issues, transition tickets, or update any Jira fields** without explicit engineer consent
 - **Never restart services, adapters, or containers** without explicit user consent
@@ -99,6 +160,14 @@ JIRA_USER=you@itential.com
 JIRA_API_TOKEN=               # id.atlassian.net → Security → API tokens
 JIRA_PROJECTS=ENG,ISD
 
+# ── Platform Skills (platform-claude-skills sync) ──────────────────────────
+GITLAB_TOKEN=                 # GitLab Deploy Token — read_repository scope
+                              # Create: platform-claude-skills → Settings → Repository → Deploy tokens
+                              # Run: scripts/sync-platform-skills.sh  (once after adding token)
+JFROG_TOKEN=                  # JFrog Identity Token — pull platform RPMs from itential.jfrog.io
+                              # Generate: itential.jfrog.io → User Profile → Generate Identity Token
+                              # Run: scripts/pull-platform-rpms.sh --version {IAP_VERSION}
+
 # ── Slack (for escalation messages) ───────────────────────────
 SLACK_SUPPORT_CHANNEL=#isd-support
 SLACK_ESCALATION_CHANNEL=#support-escalations
@@ -122,7 +191,7 @@ After reading `.env`, check which groups are missing and tell the user:
 
 The **Itential Product Support Investigation Protocol** (8 sections) is not a phase — it is a communication standard that runs throughout the entire investigation lifecycle. Apply it at every phase. Every interaction with the customer must follow it.
 
-**Never treat this as a one-time questionnaire.** At any point — Phase 1 through Phase 6 — if a section is incomplete, contradicted by new findings, or a gap is surfaced by a sub-skill, update it and post an internal ISD comment (`commentVisibility: {"type": "role", "value": "Service Desk Team"}`).
+**Never treat this as a one-time questionnaire.** At any point — Phase 1 through Phase 6 — if a section is incomplete, contradicted by new findings, or a gap is surfaced by a sub-skill, update it and post an internal ISD comment via the servicedesk API (`public: false` — see Step 2b).
 
 | Section | What it covers | When it's primarily addressed |
 |---|---|---|
@@ -197,7 +266,50 @@ Based on ticket context, platform version, symptom description, and Investigatio
 | Log evidence needed for any issue | `/troubleshoot-logs {component} {incident time}` | Sub-skill authenticates from `.env` |
 | IAG adapter OFFLINE / GatewayManager error | `/troubleshoot-adapters {IAG_ADAPTER_NAME}` | Inline IAG diagnostics follow adapter investigation |
 | Kafka adapter OFFLINE / consumer lag growing | `/troubleshoot-adapters {KAFKA_ADAPTER_NAME}` | Routes to Phase 4 (Kafka) in the sub-skill |
+| OSS tool issue (deployer, Helm chart, job-archiver, IPCTL, MCP, dev-stack) | `/troubleshoot-oss {OSS_TOOL}` | Uses GitHub public API — no auth needed; detects tool from ticket signals if no argument given |
 | UI slow / API timeouts | Inline diagnostics in Step 2b (see below) + `/troubleshoot-logs` | — |
+| **FlowAI / agent issue** — agent session failed/stuck, tool call error, agent not visible, runAgent task failing, Model Registry misconfigured | Inline FlowAI diagnostics → **Phase 3e** below | Requires Platform 6.5+, Gateway 5.5+, Gateway Manager 1.1.1+ |
+| **Device command fails** — IOS-XR / Cisco / Juniper / NX-OS command not executing via IAG | Phase 3d IAG Deep-Dive (existing) — **determine IAG4 vs IAG5 first** (see gateway routing below) | Route to `/troubleshoot-adapters` first if the adapter itself is OFFLINE |
+| **Inventory Manager** — nodes missing, populate fails, action not found, cluster_id mismatch, 403 on inventory | Inline Inventory Manager diagnostics → **Phase 3f** below | Requires Platform 6.3+, Gateway Manager 1.0.5+, Gateway 5.3+ |
+
+**IAG4 vs IAG5 determination** (required before device command and GatewayManager investigations):
+
+| Signal in ticket | Gateway version | Notes |
+|---|---|---|
+| "GatewayManager", "gateway-manager", "cluster", "mTLS", "iag5", "FlowMCP", "cluster_id" | **IAG5** | mTLS WebSocket, outbound from IAG to Platform |
+| "AGManager", "automation_gateway adapter", "iag4", "api/v2.0", "AGM" | **IAG4** | REST API, Platform polls IAG |
+| Ambiguous | Check `GET {PLATFORM_URL}/health/adapters` → `package_id` field | `adapter-automation_gateway` = IAG4; Gateway Manager service adapter = IAG5 |
+
+**Platform Skills Staleness Gate**
+
+Before invoking any platform skill (`/itential-platform`, `/itential-gateway`, `/mongodb`,
+`/redis`, `/prometheus`), check that the skill files are current — once per session:
+
+```bash
+scripts/sync-platform-skills.sh --check
+```
+
+- **Up to date** → proceed to routing.
+- **Out of date** → present to engineer:
+  ```
+  ⚠️  platform-skills is out of date. Sync to get the latest diagnostic skills?
+  [yes / no / skip]
+  ```
+  - `yes` → run `scripts/sync-platform-skills.sh`, show changed files, proceed
+  - `no` → proceed with existing copy; note "using stale platform-skills copy" in `diagnostic_report.md`
+  - `skip` → proceed, suppress the check for the rest of this session
+- **Check failed** (no `GITLAB_TOKEN`, network unavailable) → note "staleness unknown,
+  proceeding with existing copy" and continue — do not block the investigation
+
+**Platform skill routing** (after diagnostic sub-skill surfaces a signal):
+
+| Signal from diagnostic sub-skill | Platform skill | Trigger condition |
+|---|---|---|
+| `/troubleshoot-databases` finds replica lag, elections, or pool saturation > 80% | `/mongodb` | Invoke for scored life report and oplog/contention analysis |
+| `/troubleshoot-databases` finds eviction, sentinel topology issue, or `blocked_clients` > 0 | `/redis` | Invoke for scored life report and keyspace/persistence analysis |
+| `/troubleshoot-infra` finds sustained CPU > 2× cores or memory pressure on IAP nodes | `/prometheus` | Invoke if `PROMETHEUS_URL` set; pass incident time window for scoped range queries |
+| `/troubleshoot-jobs` finds WFE workers not processing or adapter application unhealthy | `/itential-platform` | Invoke for IAP application status, job worker counts, and event-loop lag check |
+| IAG is implicated as the failure point (not just the adapter it hosts) | `/itential-gateway` | Invoke for IAG health, etcd cluster status, service list, and log tail |
 
 Each sub-skill authenticates itself from `.env` when invoked — the orchestrator does not pre-authenticate.
 
@@ -273,34 +385,120 @@ Reproduce the confirmed root cause and find workarounds in an engineer-selected 
 
 ### Step 3a — Environment Selection & Authentication
 
-Discover all available `.env` files in the project, show the target platform for each, and let the engineer choose before any authentication or platform access occurs.
+Scan the **entire project tree** — current folder, `environments/`, `repro/`, and every other subfolder — for `.env` files. Present a summary of each file so the engineer can choose which environment (or which individual tokens) to use. Do this before any authentication or platform access occurs.
+
+#### Step 3a-1 — Discover all env files
 
 ```bash
-# Discover all .env files (project root + repro subdirectories, up to 3 levels deep)
-find {project_path} -maxdepth 3 \( -name ".env" -o -name ".env.*" \) 2>/dev/null \
-  | grep -v "\.git" | sort
+# Search entire project tree — all depths, all subdirectories
+python3 - <<'PYEOF'
+import os, subprocess
 
-# Show PLATFORM_URL for each file so the engineer knows what they're choosing
-for f in $(find {project_path} -maxdepth 3 \( -name ".env" -o -name ".env.*" \) \
-  | grep -v "\.git" | sort); do
-  url=$(grep "^PLATFORM_URL=" "$f" 2>/dev/null | cut -d= -f2-)
-  echo "  $f  →  ${url:-[PLATFORM_URL not set]}"
-done
+project = "{project_path}"
+skip_dirs = {".git", "node_modules", "__pycache__", ".venv", "vendor", ".terraform"}
+
+# Key variable groups to summarise per file
+KEY_VARS = [
+    ("PLATFORM_URL",          "IAP URL"),
+    ("AUTH_METHOD",           "auth"),
+    ("MONGO_URL",             "MongoDB"),
+    ("REDIS_HOST",            "Redis"),
+    ("SSH_HOST_1",            "SSH"),
+    ("JIRA_API_TOKEN",        "Jira"),
+    ("GITLAB_TOKEN",          "GitLab"),
+    ("JFROG_TOKEN",           "JFrog"),
+    ("PROMETHEUS_URL",        "Prometheus"),
+    ("ECR_REGISTRY",          "ECR"),
+    ("AWS_REGION",            "AWS"),
+    ("K8S_NAMESPACE",         "K8s"),
+]
+
+found = []
+for root, dirs, files in os.walk(project):
+    dirs[:] = [d for d in dirs if d not in skip_dirs]
+    for fname in files:
+        if fname == ".env" or fname.startswith(".env."):
+            found.append(os.path.join(root, fname))
+
+found.sort()
+
+if not found:
+    print("No .env files found anywhere in the project tree.")
+    print("Create one at the project root using the template in CLAUDE.md and try again.")
+else:
+    print(f"Found {len(found)} environment file(s):\n")
+    for idx, path in enumerate(found, 1):
+        rel = os.path.relpath(path, project)
+        vars_present = {}
+        try:
+            with open(path) as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, _, v = line.partition("=")
+                        vars_present[k.strip()] = v.strip()
+        except Exception:
+            pass
+
+        platform_url = vars_present.get("PLATFORM_URL", "[not set]")
+        print(f"  [{idx}] {rel}")
+        print(f"       Platform : {platform_url}")
+
+        present   = [label for k, label in KEY_VARS if vars_present.get(k, "")]
+        missing   = [label for k, label in KEY_VARS if not vars_present.get(k, "")]
+        print(f"       Has      : {', '.join(present) if present else 'none'}")
+        print(f"       Missing  : {', '.join(missing) if missing else 'none'}")
+        print()
+
+    print(f"  [M] Mix — pick individual variables from different files")
+    print(f"  [N] None — create a new .env from scratch")
+PYEOF
 ```
 
-If exactly one `.env` file is found → use it automatically (no prompt needed).
+#### Step 3a-2 — Present options to engineer
 
-If multiple `.env` files are found → present a numbered list:
+After showing the list above, ask:
+
 ```
-Available environments:
-  [1] {project_path}/.env            → https://customer.itential.io
-  [2] {project_path}/.env.staging    → https://staging.itential.io
-  [3] {project_path}/repro/{ISD}/.env → http://localhost:3000
-
-Which environment do you want to use for reproduction and workaround? [1/2/3]
+Which environment file do you want to use? [1 / 2 / … / M for mix / N for new]
 ```
 
-After the engineer selects, authenticate:
+**If one file:**  use it automatically and show its summary — no prompt needed.
+
+**If multiple files:**  wait for the engineer to select a number before proceeding.
+
+**If `M` (mix):**  for each variable group below, ask which file should supply it:
+
+```
+Variable group          Options (file numbers that contain it)
+─────────────────────────────────────────────────────────────
+Platform credentials    [1] .env  [2] environments/prod.env
+(PLATFORM_URL, auth)
+
+MongoDB (MONGO_URL)     [1] .env  [3] environments/staging.env
+
+Redis (REDIS_HOST)      [1] .env  [2] environments/prod.env
+
+SSH targets (SSH_HOST_N)[1] .env
+
+Jira (JIRA_API_TOKEN)   [1] .env  [2] environments/prod.env
+
+GitLab (GITLAB_TOKEN)   [2] environments/prod.env
+
+JFrog (JFROG_TOKEN)     [2] environments/prod.env
+
+Prometheus              [none available]
+AWS / ECR               [1] .env
+Kubernetes              [none available]
+
+Select source file number for each group, or Enter to skip that group:
+```
+
+Merge the selected variables into a single in-memory environment before authenticating. Do **not** write a merged file to disk.
+
+**If `N` (new):**  scaffold a blank `.env` from the CLAUDE.md template, open it for the engineer to fill in, then re-run Step 3a-1 after they confirm it is ready.
+
+#### Step 3a-3 — Authenticate with selected environment
 
 ```bash
 set -a; source {SELECTED_ENV_FILE}; set +a
@@ -318,17 +516,19 @@ curl -sk -X POST "${PLATFORM_URL}/oauth/token" \
 
 Save token to `.auth.json`:
 ```json
-{"platform_url": "...", "auth_method": "...", "token": "...", "timestamp": "..."}
+{"platform_url": "...", "auth_method": "...", "token": "...", "timestamp": "...", "env_file": "..."}
 ```
 
 Reuse token if `.auth.json` exists, `platform_url` matches, and `timestamp` < 50 min old.
 
-**`.env` naming convention:**
-- `.env` — default customer environment (project root)
-- `.env.{label}` — named environments (e.g., `.env.staging`, `.env.acme-prod`)
-- `repro/{ISD_TICKET_KEY}/.env` — local reproduction environment (see Step 3b)
+**`.env` naming convention (any of these are discovered automatically):**
+- `.env` — project root (default)
+- `.env.{label}` — named environment at project root (e.g., `.env.staging`)
+- `environments/{name}.env` or `environments/.env.{name}` — environments folder
+- `repro/{ISD_TICKET_KEY}/.env` — local reproduction environment (Step 3b)
+- Any subdirectory at any depth — the scan finds them all
 
-If the engineer wants a fresh local reproduction environment (no existing `.env` matches), proceed to Step 3b to create `repro/{ISD_TICKET_KEY}/.env`.
+If the engineer wants a fresh local reproduction environment (no existing file matches), proceed to Step 3b to create `repro/{ISD_TICKET_KEY}/.env`.
 
 ### Step 3b — Reproduce the Issue in Selected Environment
 
@@ -341,13 +541,36 @@ Using the authenticated session from Step 3a, attempt to trigger the confirmed r
 
 **If the engineer selected a customer environment** (`.env` or `.env.{label}`): run the triggering steps directly. Do not make changes without explicit approval.
 
-**If the engineer wants an isolated local reproduction environment**: proceed to Step 3b.1 to scaffold a version-matched local stack.
+**If the engineer wants an isolated local reproduction environment**: proceed to Step 3b.0 to select the deployment type, then Step 3b.1 to scaffold the environment.
+
+---
+
+### Step 3b.0 — Select Reproduction Deployment Type (when isolated env needed)
+
+Before scaffolding, ask the engineer how they want to build the reproduction environment:
+
+```
+How would you like to build the reproduction environment?
+
+  1) Docker local   — this machine (fastest, dev/test only)
+  2) Docker on VM   — SSH to an existing Linux VM
+  3) Kubernetes     — Helm charts on an existing cluster
+  4) VMs on AWS     — Themis (/themis-aws-deploy)
+
+Choice [1-4] (default: 1 — Docker local):
+```
+
+- **Options 1-3:** invoke `/deploy-containers` skill. It handles ECR auth, dev stack setup, and creates `repro/{ISD_TICKET_KEY}/.env` automatically. Return here after `/deploy-containers` completes.
+- **Option 4:** invoke `/themis-aws-deploy` skill instead. Return here after the environment is up.
+- **If engineer has no preference or says "just docker":** default to option 1 (Docker local) without prompting further.
 
 ---
 
 ### Step 3b.1 — Scaffold Local Reproduction Environment (when needed)
 
 Create an isolated `.env` under `repro/{ISD_TICKET_KEY}/` to keep Docker-local credentials separate from customer credentials. This is the local reproduction path.
+
+> **Note:** If Step 3b.0 selected Docker or K8s, `/deploy-containers` already created `repro/{ISD_TICKET_KEY}/.env`. Skip to Step 3c — the env file is ready.
 
 ---
 
@@ -659,35 +882,31 @@ Before closing the questionnaire phase, verify all 8 sections are documented on 
 
 Compose the questionnaire from the unanswered sections above and post it as a Jira comment. Only ask what the ticket has not already answered.
 
+**ISD is a Jira Service Management (JSM) project — use the servicedesk API, not the classic comment API.** The classic `/rest/api/3/issue/{key}/comment` endpoint's `visibility: {"type": "role", ...}` field is a silent no-op on JSM projects: it returns HTTP 201 with no error, but the comment posts fully public/customer-visible (`jsdPublic: true`). Always post via the servicedesk endpoint with `"public": false` instead, and always verify afterward.
+
 ```bash
 # Compose targeted questions from sections not yet answered in the ticket
-# Then post as a comment
+# Then post as an internal note via the Service Desk API (plain text body — no ADF wrapping needed)
 
-curl -s -X POST "${JIRA_URL}/rest/api/3/issue/${TICKET_KEY}/comment" \
+curl -s -X POST "${JIRA_URL}/rest/servicedeskapi/request/${TICKET_KEY}/comment" \
   -u "${JIRA_USER}:${JIRA_API_TOKEN}" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d "{
-    \"body\": {
-      \"type\": \"doc\",
-      \"version\": 1,
-      \"content\": [{
-        \"type\": \"paragraph\",
-        \"content\": [{\"type\": \"text\", \"text\": \"{QUESTIONNAIRE_TEXT}\"}]
-      }]
-    },
-    \"visibility\": {\"type\": \"role\", \"value\": \"Service Desk Team\"}
-  }"
+  -d "{\"body\": \"${QUESTIONNAIRE_TEXT}\", \"public\": false}"
+
+# Verify it actually posted internal (do this after every ISD comment post):
+curl -s "${JIRA_URL}/rest/api/3/issue/${TICKET_KEY}/comment" \
+  -u "${JIRA_USER}:${JIRA_API_TOKEN}" -H "Accept: application/json" \
+  | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+c=d['comments'][-1]
+assert c.get('jsdPublic') == False, '⚠️ COMMENT POSTED PUBLIC — jsdPublic is not false!'
+print('OK — comment', c['id'], 'is internal (jsdPublic: false)')
+"
 ```
 
-If using Atlassian MCP (preferred):
-```
-mcp__claude_ai_Atlassian_MCP__addCommentToJiraIssue(
-  issueIdOrKey: "{ISD_TICKET_KEY}",
-  commentBody: "{QUESTIONNAIRE_TEXT}",
-  commentVisibility: {"type": "role", "value": "Service Desk Team"}
-)
-```
+If using Atlassian MCP: verify whether the MCP tool's `commentVisibility`/similar parameter actually maps to the JSM `public` flag for this instance before relying on it — do not assume role-based visibility works on a JSM project just because the MCP tool accepts the parameter. When in doubt, use the curl pattern above, which is verified to work.
 
 **Questionnaire opening line to use:**
 > "Thank you for raising this issue. To help us investigate efficiently, we have a few questions. We will begin our investigation in parallel and will update this ticket as we progress."
@@ -807,6 +1026,272 @@ for j in jobs[:10]:
 | `401` from IAG | Wrong credentials or token expired | Verify `username`/`password` in adapter settings |
 | Service not found | Service name case mismatch | Verify name exactly matches `GET /api/v2.0/services` output |
 | GatewayManager error | `service` field uses wrong name | Service name must match IAG exactly — case-sensitive |
+
+---
+
+### Phase 3e — FlowAI / Agent Deep-Dive (inline)
+
+Run when triage component is `FlowAI` or ticket signals include: "agent session", "agent builder", "agent project", "agent prompt", "runAgent task", "Model Registry", "LLM profile", "FlowMCP".
+
+**Requires Platform 6.5+, Gateway 5.5+, Gateway Manager 1.1.1+.** Confirm versions from `ticket_context.md` before proceeding — FlowAI is not present in earlier releases.
+
+#### Step 3e-1 — FlowAI application health
+
+```bash
+# Check FlowAI app status (look for "flowai" in application list)
+curl -sk "{PLATFORM_URL}/api/v2/applications?token={TOKEN}" \
+  | python3 -c "
+import sys, json
+apps = json.load(sys.stdin)
+results = apps.get('results', apps) if isinstance(apps, dict) else apps
+for a in results:
+    name = a.get('name', '')
+    if 'flow' in name.lower() or 'agent' in name.lower():
+        state = a.get('state', '?')
+        version = a.get('version', '?')
+        flag = 'UP' if state == 'running' else 'DOWN'
+        print(f'[{flag}] {name}  v{version}  state={state}')
+"
+```
+
+Expected: `[UP] flowai  v{version}  state=running`. If DOWN or missing → FlowAI not installed or application crashed.
+
+#### Step 3e-2 — Recent agent sessions
+
+```bash
+# List last 10 agent sessions with status and trigger source
+curl -sk "{PLATFORM_URL}/api/v2/agents/sessions?limit=10&sort=-createdAt&token={TOKEN}" \
+  | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+sessions = data.get('results', data) if isinstance(data, dict) else data
+print(f'Recent agent sessions ({len(sessions)}):')
+for s in sessions:
+    status  = s.get('status', '?')
+    trigger = s.get('triggerType', '?')
+    agent   = s.get('agentName', s.get('name', '?'))
+    sid     = s.get('_id', s.get('id', '?'))[:12]
+    flag    = 'FAIL' if status in ('failed','error') else ('STUCK' if status == 'pausing' else 'OK  ')
+    print(f'[{flag}] {sid}  agent={agent}  status={status}  trigger={trigger}')
+"
+```
+
+For a failed session, fetch its trace:
+```bash
+SESSION_ID="{session_id from above}"
+curl -sk "{PLATFORM_URL}/api/v2/agents/sessions/${SESSION_ID}/trace?token={TOKEN}" \
+  | python3 -c "
+import sys, json
+trace = json.load(sys.stdin)
+steps = trace.get('steps', trace) if isinstance(trace, dict) else trace
+print(f'Session trace ({len(steps)} steps):')
+for step in steps[-10:]:   # last 10 steps
+    stype  = step.get('type', '?')
+    name   = step.get('name', step.get('toolName', ''))
+    result = str(step.get('result', step.get('error', '')))[:120]
+    print(f'  {stype}  {name}  → {result}')
+"
+```
+
+#### Step 3e-3 — Model Registry (LLM provider profiles)
+
+```bash
+# List registered LLM provider profiles
+curl -sk "{PLATFORM_URL}/api/v2/agents/models?token={TOKEN}" \
+  | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+profiles = data.get('results', data) if isinstance(data, dict) else data
+print(f'LLM profiles ({len(profiles)}):')
+for p in profiles:
+    name    = p.get('name', '?')
+    enabled = p.get('enabled', '?')
+    provider = p.get('provider', p.get('type', '?'))
+    models  = [m.get('name', m) for m in p.get('models', [])]
+    print(f'  {name}  provider={provider}  enabled={enabled}  models={models}')
+"
+```
+
+Common issues:
+- Profile `enabled: false` → agents using it cannot run (enable in Model Registry admin UI)
+- No models listed → model not enabled in the profile
+- Group access not granted → builder/operator group can't see the profile
+
+#### Step 3e-4 — Gateway 5 connectivity (required for tool execution)
+
+All FlowAI tool calls execute through Gateway Manager → Gateway 5. If the FlowAI app is healthy but tool calls fail in the session trace, the problem is downstream at the IAG5 cluster.
+
+```bash
+# Check Gateway Manager cluster health (via IAP admin API)
+curl -sk "{PLATFORM_URL}/api/v2/gateway-manager/clusters?token={TOKEN}" \
+  | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+clusters = data.get('results', data) if isinstance(data, dict) else data
+for c in clusters:
+    name    = c.get('name', c.get('clusterId', '?'))
+    status  = c.get('status', c.get('state', '?'))
+    svcs    = c.get('serviceCount', '?')
+    flag    = 'UP' if 'connect' in str(status).lower() or status == 'healthy' else 'DOWN'
+    print(f'[{flag}] {name}  status={status}  services={svcs}')
+"
+```
+
+If a cluster shows DOWN or disconnected → run **Phase 3d — IAG Deep-Dive** against that IAG5 cluster.
+
+For **FlowMCP Gateway** issues (external MCP tools not available in FlowAI):
+- FlowMCP is an extension of IAG5 that registers external MCP servers
+- Check that the FlowMCP service is present in the IAG5 cluster service list (Phase 3d Step: IAG service list)
+- Verify the external MCP server is reachable from the IAG5 host
+
+**Common FlowAI failure patterns:**
+
+| Symptom | Most Likely Cause | Next Step |
+|---|---|---|
+| Agent session fails immediately | Model Registry profile disabled or no model enabled | Check Step 3e-3 |
+| Tool call errors in session trace | IAG5 cluster unreachable or service missing | Phase 3d on the IAG5 cluster |
+| Agent stuck in `pausing` status | In-flight tool call hung on IAG5 | Check IAG5 job status via Phase 3d |
+| Agent session not visible in UI | `session:read` permission not granted to user group | Admin Essentials → FlowAI roles |
+| `runAgent` task fails in workflow | Agent project RBAC — workflow service account lacks project access | Check project Owner/Editor/Viewer roles |
+| FlowMCP tool not available | External MCP server not registered, or IAG5 cluster unreachable | Check FlowMCP extension and cluster |
+| Agent project not visible | User group not assigned Owner/Editor/Viewer role in the project | Agent Projects → access control |
+
+**Docs:** `docs.itential.com/itential-platform/6/flowai/overview` → Agent Sessions, Model Registry, FlowMCP Gateway sub-pages.
+
+---
+
+### Phase 3f — Inventory Manager Deep-Dive (inline)
+
+Run when triage component is `InventoryManager` or ticket signals include: "inventory manager", "nodes missing", "inventory not populated", "populate inventory", "iag5-service action", "cluster_id mismatch".
+
+**Requires Platform 6.3+, Gateway Manager 1.0.5+, Gateway 5.3+.** Inventory Manager uses a **full-replacement model** — `populateInventory` deletes all existing nodes before inserting new ones. This is the most common source of "nodes disappeared" reports.
+
+#### Step 3f-1 — List inventories
+
+```bash
+# List all inventories (name, node count, groups)
+curl -sk "{PLATFORM_URL}/inventory_manager/v1/inventories?token={TOKEN}" \
+  | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+invs = data.get('result', data.get('results', data)) if isinstance(data, dict) else data
+print(f'Inventories ({len(invs)}):')
+for inv in invs:
+    name   = inv.get('name', '?')
+    groups = inv.get('groups', [])
+    tags   = inv.get('tags', [])
+    print(f'  {name}  groups={groups}  tags={tags}')
+"
+```
+
+#### Step 3f-2 — Check node count for target inventory
+
+```bash
+INV_NAME="{inventory_name_from_ticket}"
+
+# Node count
+curl -sk "{PLATFORM_URL}/inventory_manager/v1/inventories/${INV_NAME}/nodes?limit=5&token={TOKEN}" \
+  | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+nodes = data.get('result', data.get('results', data)) if isinstance(data, dict) else data
+total = data.get('total', len(nodes)) if isinstance(data, dict) else len(nodes)
+print(f'Node count: {total}')
+print('Sample nodes (first 5):')
+for n in nodes[:5]:
+    name  = n.get('name', '?')
+    attrs = n.get('attributes', {})
+    host  = attrs.get('itential_host', '?')
+    plat  = attrs.get('itential_platform', '?')
+    cid   = attrs.get('cluster_id', '?')
+    print(f'  {name}  host={host}  platform={plat}  cluster_id={cid}')
+"
+```
+
+**If node count = 0:** the `populateInventory` task most likely ran with an empty nodes array (full-replacement clears all nodes). Ask customer to check the workflow that populates this inventory and verify the source system returned data before calling `populateInventory`.
+
+#### Step 3f-3 — Check actions for the inventory
+
+```bash
+curl -sk "{PLATFORM_URL}/inventory_manager/v1/inventories/${INV_NAME}/actions?token={TOKEN}" \
+  | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+actions = data.get('result', data.get('results', data)) if isinstance(data, dict) else data
+print(f'Actions ({len(actions)}):')
+for a in actions:
+    name    = a.get('name', '?')
+    atype   = a.get('action_type', '?')
+    svc     = a.get('action_config', {}).get('service_name', '?')
+    cluster = a.get('action_config', {}).get('cluster_id', '?')
+    print(f'  {name}  type={atype}  service={svc}  cluster={cluster}')
+"
+```
+
+**Verify:** `action_type` must be `iag5-service`. `cluster_id` in the action must match a registered Gateway Manager cluster name. `service_name` must match a service on that cluster exactly (case-sensitive).
+
+#### Step 3f-4 — Populate inventory (engineer-approved test only)
+
+> **Requires explicit engineer approval before execution — populate is destructive (full replacement).**
+
+```bash
+# Test populate — replaces ALL nodes in the inventory
+curl -sk -X POST "{PLATFORM_URL}/inventory_manager/v1/nodes/bulk" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: TOKEN={TOKEN}" \
+  -d '{
+    "inventory_identifier": "{INV_NAME}",
+    "nodes": [
+      {
+        "name": "{DEVICE_HOSTNAME}",
+        "attributes": {
+          "itential_host":     "{DEVICE_IP}",
+          "itential_platform": "iosxr",
+          "cluster_id":        "{GATEWAY5_CLUSTER_NAME}",
+          "itential_user":     "admin",
+          "itential_password": "$SECRET.{vault_path}.{key_name}"
+        },
+        "tags": ["test"]
+      }
+    ]
+  }'
+```
+
+**Node attribute reference by device platform:**
+
+| Platform | `itential_platform` value | Driver | Notes |
+|---|---|---|---|
+| Cisco IOS-XR | `iosxr` | netmiko | SSH-based; set `itential_driver_options.netmiko.timeout` for slow devices |
+| Cisco IOS | `cisco_ios` | netmiko | |
+| Cisco NX-OS | `cisco_nxos` | netmiko | |
+| Juniper JunOS | `junos` | netmiko | |
+| Palo Alto PAN-OS | `panos` | netmiko | |
+| Linux / generic SSH | `linux` | netmiko | |
+
+For slow devices, add driver options to the node attributes:
+```json
+"itential_driver_options": {
+  "netmiko": {
+    "timeout": 180,
+    "global_delay_factor": 3
+  }
+}
+```
+
+Passwords must use Vault secret references (`$SECRET.{path}.{key}`) — never plaintext in attributes.
+
+**Common Inventory Manager failure patterns:**
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Nodes missing after populate | `populateInventory` ran with empty nodes array (full-replacement cleared all) | Check workflow that calls `populateInventory` — verify source returned data |
+| `cluster_id` mismatch | Node attribute `cluster_id` doesn't match any registered Gateway Manager cluster name | List clusters via `GET /api/v2/gateway-manager/clusters` and correct the `cluster_id` |
+| Action execution fails | `service_name` case mismatch vs actual IAG5 service name | List services on the cluster via Phase 3d and correct case |
+| 403 on inventory access | User group not listed in the inventory's `groups` array | Add user group to inventory RBAC or contact admin |
+| Inventory not found | Name is case-sensitive and globally unique across all inventories | Verify exact name with `GET /inventory_manager/v1/inventories` |
+| Clear without delete | Engineer wants to empty inventory without deleting it | `DELETE /inventory_manager/v1/nodes/clear/{INV_NAME}` — safe, inventory remains |
+
+**Docs:** `docs.itential.com/itential-platform/6/inventory-manager/overview`
 
 ---
 
@@ -1005,11 +1490,14 @@ EOF
 
 # Start the stack
 docker compose up -d
-echo "Waiting for platform to be ready..."
-until curl -sk http://localhost:3000/health 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if d.get('status')=='healthy' or d.get('running') else 1)" 2>/dev/null; do
-  sleep 5; echo -n "."
+echo "Waiting for platform to be ready (5 attempts × 5s)..."
+for i in $(seq 1 5); do
+  curl -sk http://localhost:3000/health 2>/dev/null \
+    | python3 -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if d.get('status')=='healthy' or d.get('running') else 1)" 2>/dev/null \
+    && { echo "Platform ready."; break; }
+  echo "[$i/5] not ready yet, retrying in 5s"
+  sleep 5
 done
-echo "Platform ready."
 ```
 
 ### Step 4b.5 — Select and Import Reproduction Assets from builder-skills
@@ -1073,6 +1561,53 @@ echo "Membership patched."
 If the failing scenario requires a **workflow repair or custom build** beyond the imported template, invoke `/builder-agent` with the ticket's root cause and the imported project as context. The builder-agent has full knowledge of task schemas, variable wiring rules, and import patterns.
 
 If the asset type is a **JSON Form, MOP command template, or LCM action workflow**, invoke the matching specialist skill (`/itential-json-forms`, `/itential-mop`, `/itential-lcm`) to construct or repair it within the Docker environment.
+
+---
+
+### Step 4b.6 — Alternative: RPM-Based Reproduction (VM / Bare-Metal) [optional, when `JFROG_TOKEN` is set]
+
+Skip this step if the Docker path (Step 4b) is sufficient. Use the RPM path when:
+- The issue requires a full OS-level install (systemd services, file permissions, upgrade path)
+- Reproducing on a VM that matches the customer's bare-metal topology via the Ansible deployer
+- The Docker image is unavailable for the specific patch version
+
+**Pull platform RPMs from JFrog:**
+
+```bash
+# Verify token first (one-time check per session)
+scripts/pull-platform-rpms.sh --check
+
+# Browse available files for this version without downloading
+scripts/pull-platform-rpms.sh --version {IAP_VERSION} --list
+
+# Download all components (auto-routes to correct JFrog repos)
+scripts/pull-platform-rpms.sh --version {IAP_VERSION} --out-dir repro/{ISD_TICKET_KEY}/rpms
+```
+
+**Version routing (automatic):**
+- `23.2.x` / `2023.x` and below → `itential-config-service-files` (single legacy repo)
+- `6.x+` (P6) → per-component repos: `PLATFORM`, `CONFIG`, `GATEWAY-MANAGER`, `INVENTORY-MANAGER`, `SERVICE`, `FLOWAI`
+
+**Download specific components only (P6):**
+```bash
+scripts/pull-platform-rpms.sh --version {IAP_VERSION} \
+  --components platform,config,gateway-manager \
+  --out-dir repro/{ISD_TICKET_KEY}/rpms
+```
+
+**After download, RPMs land in `repro/{ISD_TICKET_KEY}/rpms/` with a `JFROG_MANIFEST.json`.**
+
+Install directly on a local VM:
+```bash
+sudo dnf install repro/{ISD_TICKET_KEY}/rpms/*.rpm
+```
+
+Or pass the paths as `platform_packages` in `run-vars.yml` to feed the Ansible deployer
+(see `/themis-aws-deploy` skill for the full VM deployment workflow).
+
+**If `JFROG_TOKEN` is missing:** the script exits with instructions to generate one at
+`itential.jfrog.io → User Profile → Generate Identity Token`. This is a per-engineer
+token — not shared via 1Password.
 
 ---
 
@@ -1240,7 +1775,7 @@ Ask:
 ```
 Post this outage summary report as an internal comment on {TICKET_KEY}? [yes / no]
 ```
-If yes: post with `commentVisibility: {"type": "role", "value": "Service Desk Team"}`. Present the comment draft before posting (same approval gate as all Jira writes).
+If yes: post via the servicedesk API with `"public": false` (see Step 2b — the classic API's `visibility` block is a no-op on JSM). Present the comment draft before posting (same approval gate as all Jira writes).
 
 #### Step 4-OR-6 — Offer to create a Problem ticket for RCA tracking
 
@@ -1298,7 +1833,7 @@ Create Problem ticket? [yes / no]
    ```
    Problem ticket {NEW_PROBLEM_KEY} created for RCA tracking. [link]
    ```
-   (commentVisibility: Service Desk Team — same gate as all Jira writes)
+   (servicedesk API, `public: false` — see Step 2b; same approval gate as all Jira writes)
 
 6. Save `problem_ticket_key: {NEW_PROBLEM_KEY}` to `ticket_context.md`.
 
@@ -1572,6 +2107,61 @@ mcp__claude_ai_Atlassian_MCP__createIssueLink(
 
 Run this phase when a fix is confirmed — either by Engineering releasing a patch, or by a workaround resolving the customer's issue.
 
+### Step 6-pre — Confirm ENG Ticket Status
+
+Before writing the resolution record, determine whether an ENG ticket exists for this issue.
+This must run even when Phase 5 was skipped (e.g. a workaround resolved the issue without formal escalation).
+
+**Step 1 — Check Jira for any ENG ticket already linked to this ISD ticket:**
+```bash
+curl -s "${JIRA_URL}/rest/api/3/issue/${ISD_TICKET_KEY}/remotelink" \
+  -u "${JIRA_USER}:${JIRA_API_TOKEN}" | python3 -c "
+import sys, json
+for link in json.load(sys.stdin):
+    url = link.get('object', {}).get('url', '')
+    title = link.get('object', {}).get('title', '')
+    if 'ENG-' in title or 'ENG-' in url:
+        print('Linked ENG:', title)
+"
+```
+
+Also check for issue links (not just remote links):
+```bash
+curl -s "${JIRA_URL}/rest/api/3/issue/${ISD_TICKET_KEY}?fields=issuelinks" \
+  -u "${JIRA_USER}:${JIRA_API_TOKEN}" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+for link in d.get('fields', {}).get('issuelinks', []):
+    for side in ('inwardIssue', 'outwardIssue'):
+        issue = link.get(side, {})
+        key = issue.get('key', '')
+        if key.startswith('ENG-'):
+            print('Linked ENG:', key, '|', issue.get('fields', {}).get('summary', ''))
+"
+```
+
+**Step 2 — Check `diagnostic_report.md` and `eng_ticket_draft.md` for any ENG ticket key:**
+```bash
+grep -oE 'ENG-[0-9]+' data/*/*/diagnostic_report.md data/*/*/eng_ticket_draft.md 2>/dev/null | sort -u
+```
+
+**Step 3 — Evaluate and act:**
+
+- If an ENG ticket key is found (from any source above): set `ENG_TICKET_KEY = <found key>`. Proceed to Step 6a.
+- If no ENG ticket exists AND the root cause is a **platform bug** (not a misconfiguration or workaround-only issue):
+  Present to the engineer:
+  > "Root cause is a platform bug. No ENG ticket has been filed yet. File one now to track the fix?
+  > Proposed summary: `[{ISD_TICKET_KEY}] {SHORT_ROOT_CAUSE}`
+  > Reply yes/no — if yes, I will create the ENG ticket and link it to this ISD ticket before recording the resolution."
+  
+  If engineer says **yes**: follow Phase 5 Step 5b to create and link the ENG ticket, capture `ENG_TICKET_KEY`.
+  If engineer says **no**: set `ENG_TICKET_KEY = N/A`.
+- If no ENG ticket exists AND root cause is a misconfiguration or environment issue: set `ENG_TICKET_KEY = N/A`.
+
+**The `ENG_TICKET_KEY` value from this step is required for Step 6a. Never leave it as a placeholder — it must be a real key or the literal string `N/A`.**
+
+---
+
 ### Step 6a — Record the Resolution Pattern
 
 Append to `{project_path}/data/known-resolutions.md`:
@@ -1579,7 +2169,7 @@ Append to `{project_path}/data/known-resolutions.md`:
 ```markdown
 ---
 ## {SHORT_TITLE}
-**Ticket:** {ISD_TICKET_KEY} | **ENG:** {ENG_TICKET_KEY or N/A}
+**Ticket:** {ISD_TICKET_KEY} | **ENG:** {ENG_TICKET_KEY — from Step 6-pre; use actual key or literal N/A}
 **Date resolved:** {TODAY}
 **IAP Versions affected:** {list}
 **Fix version:** {vX.Y.Z or "workaround only"}
@@ -1624,20 +2214,13 @@ $(if [ -n "{WORKAROUND}" ]; then echo "Workaround (if not yet on fix version): {
 
 ENG Ticket: {ENG_TICKET_KEY or 'N/A — no platform bug identified'}"
 
-curl -s -X POST "${JIRA_URL}/rest/api/3/issue/${TICKET_KEY}/comment" \
+curl -s -X POST "${JIRA_URL}/rest/servicedeskapi/request/${TICKET_KEY}/comment" \
   -u "${JIRA_USER}:${JIRA_API_TOKEN}" \
   -H "Content-Type: application/json" \
-  -d "{\"body\": {\"type\": \"doc\", \"version\": 1, \"content\": [{\"type\": \"paragraph\", \"content\": [{\"type\": \"text\", \"text\": \"${RESOLUTION_COMMENT}\"}]}]}, \"visibility\": {\"type\": \"role\", \"value\": \"Service Desk Team\"}}"
+  -d "{\"body\": \"${RESOLUTION_COMMENT}\", \"public\": false}"
 ```
 
-If using Atlassian MCP:
-```
-mcp__claude_ai_Atlassian_MCP__addCommentToJiraIssue(
-  issueIdOrKey: "{ISD_TICKET_KEY}",
-  commentBody: "{RESOLUTION_COMMENT}",
-  commentVisibility: {"type": "role", "value": "Service Desk Team"}
-)
-```
+**ISD is a JSM project** — use `/rest/servicedeskapi/request/{key}/comment` with `"public": false`, not the classic `/rest/api/3/issue/{key}/comment` with a `visibility` block (that field is a silent no-op on JSM — see Step 2b for the full verified pattern and post-verification check). Always verify `jsdPublic == false` after posting.
 
 ---
 
@@ -1732,15 +2315,12 @@ priority they selected:**
    )
    ```
 
-4. **Post a triage comment on the ticket** explaining the priority change:
-   ```
-   mcp__claude_ai_Atlassian_MCP__addCommentToJiraIssue(
-     issueIdOrKey: "{ISD_TICKET_KEY}",
-     commentBody: "Priority upgraded from {OLD} to {NEW} based on triage review.
-   The customer's description indicates [blocking/production impact summary].
-   Senior management has been notified. Investigation is in progress.",
-     commentVisibility: {"type": "role", "value": "Service Desk Team"}
-   )
+4. **Post a triage comment on the ticket** explaining the priority change — use the servicedesk API (`public: false`), not the classic API's `visibility` block, which is a no-op on JSM (see Step 2b):
+   ```bash
+   curl -s -X POST "${JIRA_URL}/rest/servicedeskapi/request/${ISD_TICKET_KEY}/comment" \
+     -u "${JIRA_USER}:${JIRA_API_TOKEN}" \
+     -H "Content-Type: application/json" \
+     -d "{\"body\": \"Priority upgraded from {OLD} to {NEW} based on triage review. The customer's description indicates [blocking/production impact summary]. Senior management has been notified. Investigation is in progress.\", \"public\": false}"
    ```
 
 ---
@@ -1850,21 +2430,12 @@ This ticket has been escalated to management.
 {Specific ask from manager}
 ```
 
-Post via Jira:
+Post via Jira — ISD is a JSM project, so use the servicedesk API with `"public": false` (the classic API's `visibility` block is a silent no-op on JSM — see Step 2b):
 ```bash
-curl -s -X POST "${JIRA_URL}/rest/api/3/issue/${TICKET_KEY}/comment" \
+curl -s -X POST "${JIRA_URL}/rest/servicedeskapi/request/${TICKET_KEY}/comment" \
   -u "${JIRA_USER}:${JIRA_API_TOKEN}" \
   -H "Content-Type: application/json" \
-  -d "{\"body\": {\"type\": \"doc\", \"version\": 1, \"content\": [{\"type\": \"paragraph\", \"content\": [{\"type\": \"text\", \"text\": \"{ESCALATION_COMMENT}\"}]}]}, \"visibility\": {\"type\": \"role\", \"value\": \"Service Desk Team\"}}"
-```
-
-Or via Atlassian MCP:
-```
-mcp__claude_ai_Atlassian_MCP__addCommentToJiraIssue(
-  issueIdOrKey: "{ISD_TICKET_KEY}",
-  commentBody: "{ESCALATION_COMMENT}",
-  commentVisibility: {"type": "role", "value": "Service Desk Team"}
-)
+  -d "{\"body\": \"{ESCALATION_COMMENT}\", \"public\": false}"
 ```
 
 ---

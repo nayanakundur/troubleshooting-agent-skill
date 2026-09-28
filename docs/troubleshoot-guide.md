@@ -225,13 +225,58 @@ SSH_LABEL_3=mongo-secondary-1
 # SSH_USER=ec2-user
 # SSH_KEY_PATH=~/.ssh/id_rsa
 
-# ── Kubernetes / EKS log collection ───────────────────────────
+# ── Kubernetes / EKS log collection (live customer environments) ──
 AWS_REGION=us-east-1
 AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=
 AWS_SESSION_TOKEN=
 KUBE_NAMESPACE=itential-prod
 KUBE_POD_PATTERN=platform6
+
+# ── /deploy-containers — Kubernetes reproduction environment ──────
+# Required for provisioning a new EKS cluster + ElastiCache Redis.
+# See environments/k8s-example.env for a complete populated example.
+
+K8S_CLUSTER_GRADE=minimum          # minimum | production
+EKS_CLUSTER_NAME=itential-repro    # used as name prefix for ElastiCache resources
+EKS_CLUSTER_REGION=us-east-2
+EKS_NODE_TYPE=                     # auto-set from grade: m5a.xlarge (minimum) | c6a.4xlarge (production)
+EKS_NODE_COUNT=                    # auto-set from grade: 2 (minimum) | 3 (production)
+EKS_K8S_VERSION=1.31
+EKS_LBC_ROLE_ARN=                  # IAM role ARN for AWS Load Balancer Controller; skill auto-creates for new clusters
+
+# External MongoDB (required — Helm charts do NOT bundle MongoDB)
+MONGO_URL=                         # mongodb+srv://... or mongodb://host:port/db
+ITENTIAL_MONGO_PASSWORD=
+
+# External Redis — ElastiCache or standalone (required — Helm charts do NOT bundle Redis)
+REDIS_HOST=
+REDIS_PORT=6379
+ITENTIAL_REDIS_PASSWORD=           # Redis AUTH token; leave blank if Redis has no auth
+
+# IAP secrets (written to itential-platform-secrets K8s secret)
+ITENTIAL_ENCRYPTION_KEY=           # 64-char hex; auto-generated if blank
+ITENTIAL_DEFAULT_USER_PASSWORD=
+
+# TLS (optional — skip for port-forward-only repro)
+TLS_CA_CERT_PATH=                  # path to CA cert file
+
+# Ingress (optional — skip for port-forward-only repro)
+K8S_INGRESS_TYPE=alb               # alb | nginx
+K8S_HOSTNAME=                      # FQDN e.g. iap-repro.internal.example.com
+K8S_INGRESS_SCHEME=internet-facing
+ACM_CERT_ARN=                      # ACM certificate ARN for ALB TLS
+
+# Adapter delivery
+K8S_ADAPTER_METHOD=pv              # pv (persistent volumes) | layered (baked-in image)
+K8S_ADAPTER_PV_SIZE=10Gi
+
+# kubectl targeting
+K8S_NAMESPACE=itential
+K8S_CONTEXT=                       # blank = current-context from KUBECONFIG
+
+# ECR registry (do not change)
+ECR_REGISTRY=497639811223.dkr.ecr.us-east-2.amazonaws.com
 
 # ── IAG direct diagnostics ────────────────────────────────────
 IAG_URL=http://localhost:8083

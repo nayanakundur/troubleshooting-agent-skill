@@ -13,8 +13,14 @@
 data/[0-9]*/
 data/repro/
 
-# Office lock files
+# Local reproduction assets — per-engineer, never commit
+# repro/rpms/ contains downloaded RPMs + JFROG_MANIFEST.json (local paths, timestamps)
+repro/
+
+# Office / presentation files
 ~$*
+*.pptx
+*.ppt
 
 # OS
 .DS_Store
@@ -26,3 +32,19 @@ __pycache__/
 # Local scratch
 /tmp/
 *.tmp
+
+# themis-aws-deploy — runtime artifacts, per-engineer, server-specific
+# Never commit: TLS private keys, EC2 IPs, SSH key paths, API keys in group_vars,
+# server-specific validation reports, AWS account infrastructure IDs
+.claude/skills/themis-aws-deploy/artifacts/
+.claude/skills/themis-aws-deploy/environments/
+.claude/skills/themis-aws-deploy/reports/
+.claude/skills/themis-aws-deploy/collections/
+.claude/skills/themis-aws-deploy/tfvars-overrides/auto-account.tfvars
+.claude/skills/themis-aws-deploy/run-vars.yml
+
+# deploy-containers — per-engineer config (contains local paths, K8s context names)
+.claude/skills/deploy-containers/run-vars.yml
+
+# Claude Code worktrees — full working-tree copies, large and redundant
+.claude/worktrees/

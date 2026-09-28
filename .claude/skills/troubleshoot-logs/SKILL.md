@@ -15,7 +15,7 @@ argument-hint: "[component: iap|iag|mongodb|redis|lb|all] [incident time]"
 
 - **Read-only** — log collection only; no file deletion, no log rotation, no service restarts
 - **Mask sensitive values** — tokens, passwords, and API keys in log output: show first 6 + last 4 characters only (e.g., `abc123...xyz9`)
-- **Read `.env` for credentials** — never ask for credentials already in `.env`
+- **Env file discovery** — before sourcing any `.env`, run the project-wide discovery (current folder, `environments/`, `repro/`, all subdirectories). If `.auth.json` already has a valid token from the orchestrator's Step 3a, reuse it. If not, present the discovered files and let the engineer choose (or mix variables from different files). Never assume the root `.env` is the only source. See `/troubleshoot` Step 3a for the full interactive flow.
 
 ---
 

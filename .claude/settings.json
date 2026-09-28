@@ -38,6 +38,15 @@
             "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/check-builder-skills-staleness.py\""
           }
         ]
+      },
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/check-platform-skills-staleness.py\""
+          }
+        ]
       }
     ]
   }

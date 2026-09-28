@@ -8,6 +8,74 @@ This file captures confirmed resolution patterns from ISD ticket investigations.
 
 ---
 
+### [ISD-9600] Platform write-path Redis client never recovers from a silently-dead connection after Sentinel failover
+
+| Field | Value |
+|-------|-------|
+| **Ticket** | ISD-9600 (Lumen Technologies, Critical) |
+| **Type** | Escalated to Engineering — root cause confirmed, fix not yet implemented (ENG ticket drafted, pending filing approval) |
+| **Component** | IAP Platform — `core/startup/Redis.js` (write-path Redis client, via `RedisWrapper.js`) |
+| **Platform** | IAP 6.5.2, on-prem, 3-node Redis Sentinel HA, TLS enabled |
+| **Severity** | S1 — production outage requiring manual restart; systemd shows service `active` throughout, masking the outage from standard monitoring |
+
+**Symptom:** After a Redis Sentinel failover, `/health/status` goes to empty `{}` on all Platform
+nodes and stays there — `itential-platform` remains `active` in systemd, but the app never
+reconnects to Redis until manually restarted. Logs show `core/startup/Redis.js` repeating
+`Error: Command timed out` / `Retrying Redis write: attempt N` against the OLD master address,
+with `All sentinels are unreachable` logged once and no further Sentinel-rediscovery attempts.
+
+**Root Cause:** Platform has ≥2 independent Redis client instances. `Service/Initialization/Redis.js`
+correctly re-resolves the master via Sentinel on any connection-close event.
+`core/startup/Redis.js` only does so on an **explicit socket-close event** — if the old master's
+connection dies *silently* (no TCP RST/FIN), this client has no way to detect the dead peer and
+just retries the same stale socket forever.
+
+**Reproduction:** `systemctl stop redis` on the master (clean TCP RST) does NOT reproduce it —
+Platform self-heals in ~11s. `kill -STOP` on the master's `redis-server` process (freezes the
+process, leaves the socket open, no RST/FIN) DOES reproduce it — confirmed stable/non-recovering
+over 6+ minutes; only resolves ~1.5s after `kill -CONT` lets the frozen peer finally close the
+socket. Full steps: `data/2026-09-16T17-20-09/ISD-9600/manual-test-guide-saptarshi.md`.
+
+**Confirmatory finding — ENG-20713 (already released in 6.5.2) does not fix this:** ENG-20713
+added `redis_command_timeout` / `redis_sentinel_command_timeout` / `redis_keep_alive` config
+properties. Setting `redis_command_timeout` to its schema minimum (1000ms) only shortens the
+failed-retry cadence (~3s vs. default ~61s) — the client still never recovers on its own. The gap
+is architectural: nothing calls disconnect-and-re-resolve-via-Sentinel on a detected timeout.
+
+**Real-world equivalents of the lab's `kill -STOP` trigger** (i.e., what actually causes a
+"silent death" connection in production, since SIGSTOP itself is not expected in the wild):
+network partition / packet blackhole (firewall or routing silently dropping packets — this is the
+scenario in ENG-20713's own original report, and the likely cause of Lumen's "unplanned reboot"
+incident too), full hypervisor-level VM freeze (live migration, CPU steal/starvation, hung kernel
+panic), cgroup/container freeze (`docker pause`, k8s freezer, freeze-snapshot-thaw backup tooling),
+ptrace/debugger attach to `redis-server`, and severe storage stalls that wedge the kernel itself.
+Note SIGSTOP only freezes the process — the kernel still answers TCP keepalive probes — so a full
+hypervisor/kernel freeze is actually a *closer* real-world analog for total silence than SIGSTOP.
+
+**Workaround:** Manual restart of `itential-platform` on all nodes (confirmed effective, matches
+customer's own workaround). Mitigations that narrow but don't close the gap: lower
+`redis_command_timeout` for faster failure detection/alerting; ensure `redis_keep_alive` is set
+(helps only for the network-partition sub-case, not for a full peer-kernel freeze); add an
+external health-check-based auto-restart on `/health/status` returning `{}`.
+
+**Engineering escalation:** Draft ENG ticket at
+`data/2026-09-16T17-20-09/ISD-9600/eng_ticket_draft.md` — recommends applying the same
+disconnect-and-re-resolve-via-Sentinel pattern already used in `Service/Initialization/Redis.js`
+(and the `failoverDetector` pattern already used for `EventSystem` per ENG-23310) to
+`core/startup/Redis.js`. **Not yet filed — pending engineer approval.**
+
+**Detection Hints (for future similar tickets):** If a customer reports "Redis/Sentinel failover
+happened, cluster is healthy, but Platform stayed broken until we restarted it, and systemd showed
+the service as active the whole time" — check `journalctl -u itential-platform` for
+`core/startup/Redis.js` `Command timed out` / `Retrying Redis write` loops. Ask whether the master
+failure was a clean stop/crash (RST sent) or something silent (network blackhole, host freeze,
+frozen VM) — only the latter reproduces this defect.
+
+**Verification:** No platform-side fix exists yet; workarounds above are mitigation only pending
+the ENG fix.
+
+---
+
 ### [ISD-9288] itenProngAppDown / itenProngAppCrash SNMP traps never sent
 
 | Field | Value |
@@ -407,3 +475,203 @@ Use `GET /operations-manager/jobs/{id}` (single-job-by-ID) for each job of inter
 **Verification:**
 No platform-side fix. Confirm workarounds work for the customer's use case by testing `GET /operations-manager/jobs/{id}` and client-side `parent.job` filtering against their job set.
 
+
+---
+
+### [ISD-9544] IAG local admin locked out — no SMTP configured for self-service password reset
+
+| Field | Value |
+|-------|-------|
+| **Ticket** | ISD-9544 |
+| **ENG Bug** | N/A |
+| **Component** | IAG — Local AAA / admin account access |
+| **Platform Version** | IAG 2023.1 / 4.x line (confirmed) |
+| **Severity** | S4 — single admin account locked out, no broader outage |
+
+**Symptom:**
+Admin locked out of the IAG web GUI. The documented email-based self-service password reset (docs.itential.com/itential-gateway/4/local-password-reset) does not deliver a reset email because SMTP is not configured on the on-prem instance. Customer has SSH access to the IAG host but no other recovery path.
+
+**Root Cause:**
+IAG's local AAA store is a SQLite database at `/var/lib/automation-gateway/automation-gateway.db`. The self-service reset flow depends on SMTP being configured to deliver the reset email; when SMTP isn't configured (common on on-prem installs without a mail relay), the flow silently produces no email and no error, leaving the customer unable to regain access. Confirmed by: customer applied the CLI workaround below and regained access successfully.
+
+**Detection Hints:**
+- Customer reports "no reset email arrives" after following the documented self-service reset docs
+- Customer has SSH/CLI access to the IAG host but not the GUI
+- Worth asking about SMTP configuration proactively before assuming an application bug
+
+**Workaround (immediate):**
+Reset the local admin password hash directly via SQLite CLI (tested on RHEL 8.10, IAG 2023.1/4.x line):
+```
+yum install sqlite -y
+cd /var/lib/automation-gateway
+sqlite3 automation-gateway.db
+
+-- Backup current hash first
+SELECT password_hash FROM account WHERE name = "admin@itential";
+
+-- Set a temporary known password hash (pbkdf2:sha512 format)
+UPDATE account SET password_hash = '<pbkdf2:sha512:...>' WHERE name = "admin@itential";
+```
+No service restart required — the account table is checked on next login attempt.
+
+**Verification:**
+1. Customer logs into the IAG GUI with the temporary password
+2. Customer is prompted/able to set a new permanent password after login
+
+---
+
+### [ISD-9608] Ansible playbook failure — "Failed to retrieve secret from Vault" during expandInventoryNodes
+
+| Field | Value |
+|-------|-------|
+| **Ticket** | ISD-9608 | **ENG** | N/A — misconfiguration, not a platform bug |
+| **Date resolved** | 2026-09-22 |
+| **IAP Versions affected** | Platform 6.5.1 (not version-specific — config issue) |
+| **Fix version** | N/A — customer-side `platform.properties` correction |
+
+**Symptom:**
+Ansible playbook execution via IAG failed before Ansible was invoked, during `expandInventoryNodes`
+in `app-inventory_manager`, with a 500 error: "Failed to retrieve secret from Vault at path
+itential/service-accounts." Separately, `/health/status` showed `"vault": "failed"` even though
+the Vault-backed adapter was demonstrably retrieving secrets successfully.
+
+**Root cause:**
+Two distinct, unrelated issues were conflated by the single "Vault" symptom:
+1. **`vault_secrets_endpoint` misconfiguration in `/etc/itential/platform.properties`.** The
+   parameter name is misleading — despite "endpoint" in the name, it must be set to the Vault
+   **secrets engine mount path** (e.g. `kv-v2` or `secret`), not to a specific secret's path
+   (customer had it set to something resembling `secret/data/srv-****`, i.e. a secret path, not
+   the engine mount).
+2. **The secret reference itself was missing a required path prefix.** The working reference
+   needed the `srv-002988` segment: `$SECRET_srv-002988/itential/service-accounts
+   $KEY_sa--its-itentialro` — the customer's original reference omitted this prefix, so the path
+   didn't resolve even once the engine mount was corrected.
+3. **`/health/status` "vault: failed" is a known cosmetic false-positive**, unrelated to the
+   above. Vault can return a "standby" response code (e.g., in an HA Vault cluster where the
+   node IAP polls isn't the active leader) that IAP's healthcheck logic treats as a failure, even
+   though secret retrieval through the adapter continues to work normally against that same
+   Vault. **Do not treat `vault: failed` on `/health/status` as proof of a broken Vault
+   connection — cross-check by testing actual secret retrieval (e.g., via a working
+   adapter/task) before assuming the connection itself is down.**
+
+**Resolution:**
+Corrected `vault_secrets_endpoint` in `platform.properties` to the actual secrets engine mount
+name (confirmed against the Vault UI / `iagctl describe`), and corrected the secret reference
+path to include the `srv-002988` prefix. Confirmed via a live call with the customer (Atush)
+walking through the Vault configuration end-to-end. No platform restart-only fix — required
+correcting the customer's own Vault config and secret reference syntax.
+
+**Workaround:**
+N/A — this was the fix itself, not a temporary workaround.
+
+**Detection hints:**
+- `"Failed to retrieve secret from Vault at path {X}"` + `expandInventoryNodes` in
+  `app-inventory_manager` → check `vault_secrets_endpoint` in `platform.properties` FIRST. It
+  should hold the Vault **secrets engine mount name**, not a secret path — a very easy
+  mix-up given the "endpoint" naming.
+- `iagctl describe` values for secret/role can differ from what's shown in the IAP GUI — use
+  `iagctl describe` and the Vault UI as the source of truth when reconciling `platform.properties`.
+- `/health/status` showing `"vault": "failed"` does NOT necessarily mean Vault is unreachable or
+  broken — verify with an actual secret-retrieval test (adapter task, `curl` to Vault directly)
+  before escalating on this signal alone. This is a recurring false-positive worth flagging
+  broadly, not just for this ticket.
+- To pass a Vault AppRole `secret_id`/`role_id` without exposing it in a git repo: encrypt with
+  `node encrypt.js` (in `/opt/itential/platform/server/utils`) using the `encryption_key` from
+  `platform.properties`, producing a `$ENC...` value — this is the supported alternative to the
+  `$SECRET_` adapter-style syntax for values that live in `platform.properties` itself rather
+  than in an adapter/workflow field.
+
+**Verification:**
+Customer confirmed resolution on a live call (2026-09-21/22); ticket closed 2026-09-22.
+
+**Note vs. original triage hypothesis:** Initial triage (pre-investigation-summary.md,
+2026-09-17) flagged ENG-24156 (a released `itential-inventory-manager` regression fixed in
+Platform-6.5.1 for the CyberArk provider path) as the top hypothesis, speculating an unfixed
+sibling defect in the Vault code path. **That hypothesis was not confirmed** — root cause was
+customer-side Vault configuration, not a platform regression. No ENG ticket needed.
+
+
+---
+
+### [ISD-9522] Two-part outage: IAG adapters offline (network policy) + MS_SQL adapter offline (VPN traffic selector + SSL cert)
+
+| Field | Value |
+|-------|-------|
+| **Ticket** | ISD-9522 |
+| **ENG Bug** | N/A — infra/config issues, not a platform bug (related internal ops ticket: PCOP-6117, cert sideload) |
+| **Component** | IAG connectivity (cloud-to-on-prem network policy) + `adapter-db_mssql` (SSL/TLS config) |
+| **Platform** | itential-saas (cloud IAP + on-prem IAG) |
+| **Severity** | S1 (initial) — production outage; downgraded to S3 once IAG connectivity was restored, remaining MS_SQL adapter issue tracked to resolution over ~3 weeks |
+
+**Symptom (Part 1 — outage):**
+Root workflow task "Run Command Template" failed. Customer's on-prem IAG adapters showed OFFLINE
+in the platform. Traffic from IAG to the cloud platform stopped at a specific time, observed via
+customer-side logs.
+
+**Root Cause (Part 1):**
+An Itential-side network policy change broke the cloud-to-on-prem IAG connection path. Confirmed
+and fixed by Itential's cloud engineering team on their end — not a customer misconfiguration.
+Once fixed, IAG adapters came back online and a test workflow successfully pushed a device
+change, confirming full recovery.
+
+**Resolution (Part 1):** Fixed by Itential cloud engineering (internal network policy correction).
+Ticket was reclassified from outage to a standard problem ticket once this was confirmed resolved,
+and kept open to track the second, unrelated MS_SQL adapter issue below.
+
+---
+
+**Symptom (Part 2 — MS_SQL/SolarWinds adapter offline):**
+A separate adapter (`@itentialopensource/adapter-db_mssql`, targeting a SolarWinds-backed SQL
+host) remained OFFLINE even after the IAG outage above was resolved. This adapter had been
+working previously; the customer had recently rebuilt the target SQL server on new
+infrastructure with a new IP as part of a platform migration.
+
+**Root Cause (Part 2) — two independent, sequential problems:**
+1. **Policy-based site-to-site VPN traffic selectors were incomplete.** The customer's
+   policy-based VPN only had traffic-selector pairs configured for the two IAG hosts — the newly
+   rebuilt SQL host's pair (matching it against Itential's cloud NAT source address) was never
+   added on the customer side. Because policy-based VPNs require an explicit selector pair per
+   individual connection (not just per subnet), traffic for the new host was silently dropped
+   even though the tunnel itself was healthy and the other two hosts worked fine. Confirmed by
+   comparing negotiated traffic selectors on both sides of the tunnel — only 2 of 3 expected
+   host pairs were present.
+2. **Once VPN connectivity was fixed, the adapter still failed** — `ssl.enabled: true` on the
+   adapter config, but `ca_file` was an empty string, so the adapter could never validate the
+   target's TLS certificate and kept restarting continuously. Confirmed by: toggling
+   `ssl.enabled: false` immediately brought the adapter online and a dependent workflow ran
+   successfully — isolating the fault to the SSL/cert configuration, not connectivity.
+   Additionally, the adapter config had a **redundant duplicate parameter** — both `ca_file` and
+   `cafile` were present; only `ca_file` is the correct/effective parameter name.
+
+**Resolution (Part 2):**
+1. Customer's network/VPN team added the missing traffic-selector pair for the new SQL host to
+   their VPN policy.
+2. Customer generated a CA cert for the rebuilt SQL server and uploaded it to the ticket.
+3. Itential support sideloaded the cert file into the platform's keys directory (path convention:
+   `/opt/itential/automation-platform/keys/{customer-ca-cert}.pem`) — this required a production
+   environment restart, scheduled with the customer in advance.
+4. Adapter config updated: `ca_file` set to the sideloaded cert path; the redundant `cafile` line
+   removed. `ssl.enabled` re-toggled to `true`.
+5. Adapter came back online and stayed online with SSL enabled.
+
+**Detection Hints:**
+- IAG adapters OFFLINE simultaneously, all from one on-prem site, with no adapter-config changes
+  on the customer side → suspect Itential-side network/policy change first; escalate internally
+  to cloud engineering rather than assuming a customer misconfiguration.
+- A specific adapter goes OFFLINE right after the customer migrates/rebuilds its target
+  infrastructure (new IP, new host) even though nothing changed in the adapter config itself →
+  check whether the customer is on a **policy-based** VPN (not route-based) — these require a
+  distinct traffic-selector pair per connection/host, not just per subnet, and migrations
+  routinely miss adding the new host's pair.
+- Adapter continuously restarting/flapping with `ssl.enabled: true` and an empty `ca_file` →
+  toggle `ssl.enabled: false` as a fast diagnostic (not a permanent fix) to confirm whether SSL
+  cert validation is the blocker before troubleshooting connectivity further.
+- Watch for duplicate/near-duplicate SSL parameters in adapter configs (e.g. `ca_file` vs
+  `cafile`) — only one may be the actual effective parameter; the other is dead weight that can
+  mislead troubleshooting.
+
+**Verification:**
+1. Confirm IAG/adapter shows ONLINE in platform health.
+2. Run a workflow/task that exercises the adapter end-to-end (not just a health ping).
+3. For SSL cert fixes specifically: confirm the adapter stays online over time rather than
+   flapping (a bad cert path can look briefly healthy before the next reconnect attempt fails).

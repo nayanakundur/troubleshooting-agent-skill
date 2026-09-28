@@ -34,9 +34,13 @@ Run Phase 1 (job profile) → Phase 7 (full parent-child error chain + true-stal
 
 ## Auth Reuse
 
+**Env file selection:** If the orchestrator already ran Step 3a and `.auth.json` holds a token less than 50 minutes old whose `platform_url` matches, reuse it directly.
+
+If no valid cached token exists, run env discovery across the entire project tree (current folder, `environments/`, `repro/`, all subdirectories) and present the engineer with a numbered list of found `.env` files showing `PLATFORM_URL` and which variable groups each file contains. See `/troubleshoot` Step 3a for the full interactive selection flow (including mix-and-match from different files).
+
 Check `{project_path}/.auth.json`:
-- If `platform_url` matches `PLATFORM_URL` in `.env` and `timestamp` < 50 minutes old → reuse token
-- Otherwise authenticate from `.env` and save `.auth.json`
+- If `platform_url` matches the selected env and `timestamp` < 50 minutes old → reuse token
+- Otherwise authenticate from the selected env file and save `.auth.json`
 
 **Password auth:**
 ```bash
