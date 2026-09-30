@@ -1,0 +1,65 @@
+{
+  "name": "IPSO-10031 Repro - Jinja2 Cast Type Mismatch",
+  "description": "Reproduction workflow for IPSO-10031: TemplateBuilder.renderJinja2TemplateWithCast declares its 'renderedTemplate' output as type 'object' in pronghorn.json regardless of the selected castDataType, even when castDataType is set to 'string' and the runtime genuinely returns a plain string (see cog.js). Wiring that output into WorkFlowEngine.ViewData's 'body' field (declared type 'string') reproduces the Canvas false-positive type-mismatch warning described in the ticket.",
+  "type": "automation",
+  "canvasVersion": 3,
+  "encodingVersion": 1,
+  "font_size": 12,
+  "tasks": {
+    "workflow_start": { "name": "workflow_start", "groups": [], "nodeLocation": { "x": 600, "y": 200 } },
+    "a1": {
+      "name": "renderJinja2TemplateWithCast",
+      "canvasName": "renderJinja2TemplateWithCast",
+      "summary": "Render Jinja2 Template With Data Cast (castDataType=string)",
+      "description": "IPSO-10031 repro task: renders a Jinja2 template with castDataType explicitly set to 'string'. Declared outgoing schema for 'renderedTemplate' is hardcoded to type 'object' in pronghorn.json regardless of castDataType.",
+      "location": "Application",
+      "app": "TemplateBuilder",
+      "type": "automatic",
+      "displayName": "TemplateBuilder",
+      "variables": {
+        "incoming": { "name": "IPSO-10031 Repro Template", "variables": { "sample_key": "sample_value" }, "castDataType": "string" },
+        "outgoing": { "renderedTemplate": "" }
+      },
+      "actor": "Pronghorn",
+      "groups": [],
+      "nodeLocation": { "x": 600, "y": 320 }
+    },
+    "b2": {
+      "name": "ViewData",
+      "canvasName": "ViewData",
+      "summary": "View Rendered Template Output",
+      "description": "IPSO-10031 repro task: consumes Task a1's 'renderedTemplate' output (declared object, actually a string at runtime) in the 'body' field (declared string).",
+      "location": "Application",
+      "app": "WorkFlowEngine",
+      "displayName": "WorkFlowEngine",
+      "type": "manual",
+      "variables": {
+        "incoming": {
+          "header": "IPSO-10031 Repro - Jinja2 Cast Type Mismatch",
+          "message": "Review the rendered template output below. This value was produced by renderJinja2TemplateWithCast with castDataType=string.",
+          "body": "$var.a1.renderedTemplate",
+          "variables": {},
+          "btn_success": "Continue",
+          "btn_failure": "Cancel"
+        },
+        "outgoing": {},
+        "error": "",
+        "decorators": []
+      },
+      "view": "/workflow_engine/task/ViewData",
+      "groups": [],
+      "scheduled": false,
+      "nodeLocation": { "x": 600, "y": 440 }
+    },
+    "workflow_end": { "name": "workflow_end", "groups": [], "nodeLocation": { "x": 600, "y": 560 } }
+  },
+  "transitions": {
+    "workflow_start": { "a1": { "state": "success", "type": "standard" } },
+    "a1": { "b2": { "state": "success", "type": "standard" } },
+    "b2": { "workflow_end": { "state": "success", "type": "standard" } },
+    "workflow_end": {}
+  },
+  "groups": [],
+  "inputSchema": { "type": "object", "properties": {}, "required": [] },
+  "outputSchema": { "type": "object", "properties": {} }
+}

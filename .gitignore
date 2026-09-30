@@ -46,5 +46,9 @@ __pycache__/
 # deploy-containers — per-engineer config (contains local paths, K8s context names)
 .claude/skills/deploy-containers/run-vars.yml
 
+# deploy-containers — generated EKS cluster configs (per-session cluster naming/region,
+# not a template — the skill regenerates these each run)
+environments/eks/
+
 # Claude Code worktrees — full working-tree copies, large and redundant
 .claude/worktrees/

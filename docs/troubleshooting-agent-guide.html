@@ -902,6 +902,7 @@
   <button class="tab-btn" onclick="showTab('exec')">&#9642; Executive Summary</button>
   <button class="tab-btn active" onclick="showTab('overview')">&#9642; Overview &amp; Architecture</button>
   <button class="tab-btn" onclick="showTab('prereqs')">&#9642; Prerequisites</button>
+  <button class="tab-btn" onclick="showTab('environments')">&#9642; Environments</button>
   <button class="tab-btn" onclick="showTab('user')">&#9642; User Guide</button>
   <button class="tab-btn" onclick="showTab('admin')">&#9642; Admin Guide</button>
   <button class="tab-btn" onclick="showTab('subskills')">&#9642; Sub-Skills Reference</button>
@@ -1987,9 +1988,247 @@ flowchart TD
         <div class="prereq-check-item"><div class="prereq-check-box"></div><span>Required run-vars filled: <code>architecture</code>, <code>os</code>, <code>themis_root</code>, <code>owner</code>, <code>deployer_repo</code>, <code>tls_repo</code>, <code>aws_profile</code>, <code>ssh_key_path</code></span></div>
         <div class="prereq-check-item"><div class="prereq-check-box"></div><span>Cost acknowledged — know how many VMs will be created and have a destroy plan ready</span></div>
       </div>
+      <div class="note" style="margin-top:10px;"><strong>The Pre-Build Confirmation Gate does this checking for you</strong> — it fires automatically before every <code>tofu apply</code> (regardless of <code>--auto</code> mode) and shows a per-role CPU/Memory Allocation Breakdown table (Platform / MongoDB / Redis / Gateway — instance type, host count from the architecture's tfvars, vCPU, RAM, and a running total) before asking for the "yes" that lets provisioning proceed. This checklist is for your own mental prep; the gate is the actual enforcement.</div>
+      <div class="note" style="margin-top:10px;"><strong>After the build finishes</strong>, Step 6c (<code>LOCAL-EXTENSIONS.md</code>) presents a Post-Build Component Summary Table — per-role host list, the actual MongoDB version parsed from the certify reports' <code>db version vX.Y.Z</code> line, and the Platform/Gateway release pulled from <code>run-vars.yml</code>. This supplements (doesn't replace) the vendor skill's own End-of-run summary of certify PASS/FAIL and report file locations.</div>
+      <div class="note" style="margin-top:10px;"><strong>Then Step 6d checks whether anything from this build needs to be fed back into the skill.</strong> It reflects on undocumented failures, timing drift against the Section 9 runtime table, or unanticipated decisions the confirmation gate didn't ask about — checking <code>LOCAL-EXTENSIONS.md</code>, <code>references/troubleshooting.md</code>, and the HTML guide before assuming anything is new. A genuine finding gets drafted as a proper <code>[OVERRIDE]</code>/<code>[INSERT AFTER Step N]</code> section and offered via <code>/contribute skill-fix themis-aws-deploy</code> — which automatically targets <code>LOCAL-EXTENSIONS.md</code>, never the vendor <code>SKILL.md</code>.</div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Kubernetes</div>
+      <h2 class="section-heading">Kubernetes / EKS Prerequisites</h2>
+      <p style="margin:0 0 10px;color:var(--muted);">Covers both cluster types <span class="inline-code">/deploy-containers k8s</span> supports — a newly provisioned or existing AWS EKS cluster, and a pre-existing local <span class="inline-code">kind</span> cluster. The skill detects which one is active (<span class="inline-code">kubectl config current-context</span> showing <span class="inline-code">kind-&lt;name&gt;</span>) and the rest of the flow applies identically; only image-pull mechanics differ.</p>
+
+      <div class="table-wrap" style="margin-top:10px;">
+        <table>
+          <thead><tr><th>Tool</th><th>Needed for</th><th>Install</th></tr></thead>
+          <tbody>
+            <tr><td><code>kubectl</code></td><td>Both paths</td><td><code>brew install kubectl</code></td></tr>
+            <tr><td><code>helm</code> 3.15+</td><td>Both paths</td><td><code>brew install helm</code></td></tr>
+            <tr><td><code>eksctl</code> ≥ 0.190</td><td>EKS only — cluster provisioning, IRSA roles</td><td><code>brew install eksctl</code></td></tr>
+            <tr><td>AWS CLI v2</td><td>EKS only — ECR auth, cluster ops, ElastiCache</td><td><code>brew install awscli</code></td></tr>
+            <tr><td><code>kind</code></td><td>Local cluster path only</td><td><code>brew install kind</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="warning" style="margin-top:14px;"><strong>Gotcha — Apple Silicon (arm64) <code>kind</code> nodes cannot pull amd64-only images the normal way.</strong> Unlike <code>docker run</code>, which transparently emulates amd64 via QEMU, containerd inside a <code>kind</code> node performs strict CRI platform matching and fails (or silently picks the wrong manifest) on an amd64-only image — this hits the IAG5 image specifically. Fix: pull on the host with <code>docker pull --platform linux/amd64</code>, then <code>kind load docker-image</code> to side-load it directly into the node's containerd. EKS worker nodes never hit this — the image always matches their platform.</div>
+
+      <div class="danger" style="margin-top:10px;"><strong>cert-manager is required, not optional — and must be installed cluster-wide, never as a per-chart subchart.</strong> Setting <code>certManager.enabled: true</code> inside the <code>iap</code>/<code>iag5</code> Helm values causes a chicken-and-egg problem: the chart needs cert-manager's CRDs to already exist before it can even dry-run. Install cert-manager once, cluster-wide, then set <code>certManager.enabled: false</code> in every chart's values — the chart still creates its own <code>Issuer</code>/<code>Certificate</code> objects. Related: a <code>ClusterIssuer</code>'s CA secret is looked up in the <strong>cert-manager namespace</strong>; a namespaced <code>Issuer</code>'s CA secret is looked up in <strong>its own namespace</strong>. The <code>iap</code> chart defaults to <code>ClusterIssuer</code>, <code>iag5</code> defaults to <code>Issuer</code> — if both charts share one CA, copy the secret into both namespaces explicitly.</div>
+
+      <div class="note" style="margin-top:10px;"><strong>Local <code>kind</code> sizing:</strong> every workload runs on the Mac itself, so Docker Desktop's configured resource allocation (Settings → Resources) is the effective ceiling for the whole cluster. Size it to at least the minimum grade (4 vCPU / 16 GB) — IAP's own resource needs don't change based on where the cluster runs.</div>
+
+      <div class="section-label" style="margin-top:20px;">Pre-Run Checklist</div>
+      <h2 class="section-heading" style="font-size:15px;">Kubernetes Pre-Build Checklist</h2>
+      <div class="prereq-checklist">
+        <div class="prereq-check-item"><div class="prereq-check-box"></div><span>Cluster type decided — new/existing EKS, or a pre-existing local <code>kind</code> cluster — and <code>kubectl config current-context</code> confirmed pointing at it</span></div>
+        <div class="prereq-check-item"><div class="prereq-check-box"></div><span>cert-manager installed cluster-wide (not left to a chart's <code>certManager.enabled: true</code>)</span></div>
+        <div class="prereq-check-item"><div class="prereq-check-box"></div><span>External MongoDB and Redis reachable from inside the cluster — the IAP Helm chart bundles neither</span></div>
+        <div class="prereq-check-item"><div class="prereq-check-box"></div><span>No stale <code>pending-install</code> Helm release on this cluster from a prior interrupted session (<code>helm list -n itential --pending</code>)</span></div>
+        <div class="prereq-check-item"><div class="prereq-check-box"></div><span>If Apple Silicon + local <code>kind</code>: aware of the arm64 image-pull gotcha above before the IAG5 Helm install</span></div>
+        <div class="prereq-check-item"><div class="prereq-check-box"></div><span>Cost acknowledged (EKS path only) — EKS cluster + nodes + any provisioned DocumentDB/ElastiCache accrue AWS spend until destroyed</span></div>
+      </div>
+      <div class="note" style="margin-top:10px;">Full mechanics for both paths: <button onclick="showTab('subskills')" style="background:none;border:none;color:var(--pink-soft);cursor:pointer;text-decoration:underline;font-size:inherit;padding:0;">Sub-Skills → /deploy-containers</button>. Deeper reference: <code>.claude/skills/deploy-containers/references/k8s-prerequisites.md</code>.</div>
     </div>
 
   </div>
+</div>
+
+<div id="tab-environments" class="tab-content">
+
+  <div class="section">
+    <div class="section-label">Reproduction</div>
+    <h2>Reproduction Environment Capabilities</h2>
+    <p class="desc"><span class="inline-code">/troubleshoot</span> Phase 3 (Reproduce &amp; Workaround) can investigate or reproduce a confirmed root cause five different ways — from zero-setup (the customer's own live environment, or one a prior session already deployed) up to a full multi-VM AWS topology matching the customer's exact architecture. Building a new isolated environment is the exception, not the default: most investigations never leave the customer's live environment, and Step 3a always checks for an already-deployed one before anything new gets built. This tab is the decision guide for when a new build is actually warranted and which of the three build methods fits.</p>
+  </div>
+
+  <div class="section">
+    <h2>Decision Tree</h2>
+    <p class="desc">This is the logic <span class="inline-code">/troubleshoot</span> Phase 3 now uses to open with a stated recommendation before showing the deployment-type menu, and the same logic <span class="inline-code">/deploy-containers</span> uses when invoked standalone.</p>
+    <div class="diagram-card">
+      <div class="mermaid">
+flowchart TD
+    START["Confirmed root cause&lt;br/&gt;(Phase 2)"] --> Q1{"Does confirming it&lt;br/&gt;require any writes to&lt;br/&gt;the customer's system?"}
+
+    Q1 -->|"No — read-only&lt;br/&gt;API/log/config check"| LIVE["Customer's live environment,&lt;br/&gt;or an already-deployed one&lt;br/&gt;No build needed"]
+
+    Q1 -->|"Yes — restart, settings&lt;br/&gt;change, adapter install,&lt;br/&gt;workflow that writes data"| Q2{"Kubernetes/Helm-specific,&lt;br/&gt;or orchestration&lt;br/&gt;fidelity matters?"}
+
+    Q2 -->|"Yes"| K8S["Kubernetes / EKS&lt;br/&gt;via /deploy-containers"]
+
+    Q2 -->|"No"| Q3{"Needs OS-level fidelity —&lt;br/&gt;systemd, upgrade paths,&lt;br/&gt;HA replica sets,&lt;br/&gt;multi-host topology?"}
+
+    Q3 -->|"Yes"| THEMIS["Themis — full VM topology&lt;br/&gt;via /themis-aws-deploy"]
+
+    Q3 -->|"No"| Q4{"Needs network isolation&lt;br/&gt;from your own machine?"}
+
+    Q4 -->|"Yes"| VM["Docker on VM&lt;br/&gt;via /deploy-containers"]
+
+    Q4 -->|"No"| LOCAL["Docker local — default&lt;br/&gt;via /deploy-containers"]
+
+    style START fill:#14173a,stroke:#ec1e7f,color:#e9eaf2
+    style Q1 fill:#1a1d3e,stroke:#3d9be8,color:#e9eaf2
+    style Q2 fill:#1a1d3e,stroke:#3d9be8,color:#e9eaf2
+    style Q3 fill:#1a1d3e,stroke:#3d9be8,color:#e9eaf2
+    style Q4 fill:#1a1d3e,stroke:#3d9be8,color:#e9eaf2
+    style LIVE fill:#0a1a0a,stroke:#b8c22e,color:#e9eaf2
+    style K8S fill:#1a0e1e,stroke:#e84d9b,color:#e9eaf2
+    style THEMIS fill:#1a0808,stroke:#e84d4d,color:#e9eaf2
+    style VM fill:#1a0a2e,stroke:#9b4de8,color:#e9eaf2
+    style LOCAL fill:#081422,stroke:#3d9be8,color:#e9eaf2
+      </div>
+    </div>
+  </div>
+
+  <hr class="section-divider" />
+
+  <div class="section">
+    <h2>Comparison Matrix</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Option</th><th>Setup time</th><th>Cost</th><th>Fidelity to customer topology</th><th>Best for</th><th>Safety gates</th><th>Invoke via</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Customer's live environment, or an already-deployed one</td>
+            <td>None — already exists</td>
+            <td>None</td>
+            <td>Perfect for the customer's own system; whatever a prior build left behind for an already-deployed one</td>
+            <td>Read-only diagnosis on the customer's system; re-using a repro environment a prior session already built instead of building a new one</td>
+            <td>No writes without explicit engineer approval (customer system); none needed for an already-deployed repro environment</td>
+            <td><span class="inline-code">/troubleshoot</span> Step 3a — select from the discovered <span class="inline-code">.env</span> files (customer <span class="inline-code">.env</span>, or a prior <span class="inline-code">environments/*.env</span> / <span class="inline-code">repro/{TICKET}/.env</span>)</td>
+          </tr>
+          <tr>
+            <td>Docker local</td>
+            <td>~5 min</td>
+            <td>None (your machine)</td>
+            <td>Low — single-process Compose stack, no OS-level behavior</td>
+            <td>Generic workflow/adapter/JST/API/UI bugs</td>
+            <td>Step 3d (method + container limits) → Step 4e (actual versions) → Step 4f (learnings check)</td>
+            <td><span class="inline-code">/deploy-containers docker-local</span></td>
+          </tr>
+          <tr>
+            <td>Docker on VM</td>
+            <td>~10–20 min</td>
+            <td>EC2 cost only if a new VM is provisioned</td>
+            <td>Medium — real VM, simplified topology</td>
+            <td>Same as Docker local, plus network isolation from your own machine</td>
+            <td>Step 2.vm.3 (vCPU/RAM if new EC2) → Step 3d → Step 4e → Step 4f</td>
+            <td><span class="inline-code">/deploy-containers docker-vm</span></td>
+          </tr>
+          <tr>
+            <td>Kubernetes / EKS</td>
+            <td>~20–50 min</td>
+            <td>EKS cluster + node costs (ongoing until torn down)</td>
+            <td>High if the customer's deployment is K8s-based</td>
+            <td>Kubernetes/Helm-specific root causes; OSS Helm chart bugs</td>
+            <td>Step 2.k8s.1/2.k8s.2/2.k8s.3 (vCPU/RAM per resource) → Step 5c.5 (consolidated) → Step 5f.5 (actual versions) → Step 5f.6 (learnings check)</td>
+            <td><span class="inline-code">/deploy-containers k8s</span></td>
+          </tr>
+          <tr>
+            <td>Themis (full VM topology)</td>
+            <td>~45–70 min (aio) up to longer for ha2/asa</td>
+            <td>EC2 cost for every VM in the architecture (ongoing until destroyed)</td>
+            <td>High — matches bare-metal/VM multi-host topology and HA architectures</td>
+            <td>OS-level reproduction: init scripts, systemd, upgrade paths, replica-set/Sentinel HA, multi-host network issues</td>
+            <td>Step 2a Pre-Build Confirmation Gate (per-role CPU/Memory Breakdown) → Step 6c (actual versions) → Step 6d (learnings check)</td>
+            <td><span class="inline-code">/themis-aws-deploy</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <hr class="section-divider" />
+
+  <div class="section">
+    <h2>When To Pick Each</h2>
+    <div class="cards" style="margin-bottom:24px;">
+      <div class="card t-olive">
+        <div class="icon">LV</div>
+        <h3>Customer's Live Environment — or an Already-Deployed One</h3>
+        <p>Default choice for most investigations. Confirming root cause via API calls, log inspection, or config comparison needs no isolated build at all — Docker is not required to investigate live environments. Also check Step 3a's discovered <span class="inline-code">.env</span> list first: if a prior session already built a Docker/K8s/Themis repro environment for this ticket (or a shared one exists under <span class="inline-code">environments/</span>), reuse it instead of building a new one.</p>
+      </div>
+      <div class="card t-blue">
+        <div class="icon">DL</div>
+        <h3>Docker Local</h3>
+        <p>The issue is application-level — a workflow, adapter, JST script, API response, or UI bug — and doesn't depend on OS behavior, orchestration, or multi-host topology. Fastest path when an isolated build is warranted.</p>
+      </div>
+      <div class="card t-purple">
+        <div class="icon">VM</div>
+        <h3>Docker on VM</h3>
+        <p>Same profile as Docker local, but you need network isolation — something must be reachable from elsewhere, or your own machine can't run Docker or has conflicting local services.</p>
+      </div>
+      <div class="card t-magenta">
+        <div class="icon">K8</div>
+        <h3>Kubernetes / EKS</h3>
+        <p>The confirmed root cause is Kubernetes/Helm-specific (pod scheduling, StorageClass, ingress, chart schema), the customer runs on K8s and orchestration fidelity matters, or it's an OSS Helm chart bug.</p>
+      </div>
+      <div class="card t-red">
+        <div class="icon">TH</div>
+        <h3>Themis — Full VM Topology</h3>
+        <p>Root cause needs OS-level fidelity: systemd/init scripts, RPM install/upgrade paths, MongoDB replica-set or Redis Sentinel HA behavior, multi-host network topology, or matching the customer's exact architecture (aio/minimal/ha2/asa).</p>
+      </div>
+    </div>
+  </div>
+
+  <hr class="section-divider" />
+
+  <div class="section">
+    <h2>How <span class="inline-code">/troubleshoot</span> Leverages This</h2>
+    <p class="desc">Phase 3's steps, in order, and where the decision guidance above now plugs in:</p>
+    <div class="rule-list">
+      <div class="rule-item">
+        <div class="rule-label">Step 3a</div>
+        <div class="rule-body">Scans the entire project tree for <span class="inline-code">.env</span> files — the customer's own, plus any <span class="inline-code">environments/*.env</span> or <span class="inline-code">repro/{TICKET}/.env</span> a prior session already built — presents them to the engineer with a summary of what each unlocks, and authenticates once one is selected. Token cached in <span class="inline-code">.auth.json</span> for 50 minutes. An already-deployed repro environment found here means Layer 2 below never needs to run.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">Step 3b — branch</div>
+        <div class="rule-body">If the engineer selected the customer's environment or an already-deployed repro environment from Step 3a, run the confirmed trigger steps directly — no writes without explicit approval on the customer's system. If no suitable environment exists yet and a new isolated build is wanted, the new Decision Guidance runs first: Layer 1 checks whether reproduction needs any writes at all (if not, stay on the customer's live environment); Layer 2, only reached when isolation is warranted, picks which build method fits the root cause.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">Step 3b.0</div>
+        <div class="rule-body">Opens with the Layer 2 recommendation stated in plain language (e.g. "this looks like a Helm chart StorageClass issue — I'd suggest Kubernetes"), then shows the numbered menu for the engineer to confirm or override. Options 1–3 invoke <span class="inline-code">/deploy-containers</span>; option 4 invokes <span class="inline-code">/themis-aws-deploy</span>. No preference stated defaults to Docker local.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">Step 3b.1</div>
+        <div class="rule-body">Scaffolds an isolated <span class="inline-code">repro/{ISD_TICKET_KEY}/.env</span> to keep reproduction credentials separate from customer credentials — skipped if <span class="inline-code">/deploy-containers</span> already created it.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">Standalone invocation</div>
+        <div class="rule-body"><span class="inline-code">/deploy-containers</span> and <span class="inline-code">/themis-aws-deploy</span> can also be invoked directly, outside a <span class="inline-code">/troubleshoot</span> session — <span class="inline-code">/deploy-containers</span>'s own Step 0 carries the same Layer 2 questions for when no Phase 2 diagnosis context is available.</div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="section-divider" />
+
+  <div class="section">
+    <h2>Safety &amp; Post-Build Gates</h2>
+    <p class="desc">Every build method — Docker, Kubernetes, and Themis — carries the same three-part safety pattern. Full mechanics live in the Sub-Skills and Admin tabs; this is the cross-reference.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Gate</th><th>What it guarantees</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Pre-build confirmation</td>
+            <td>Method + exact CPU/memory for every component shown before anything billable is created; explicit "yes" required</td>
+            <td><span class="inline-code">/deploy-containers</span> Steps 2.vm.3 / 2.k8s.1 / 2.k8s.2 / 2.k8s.3 / 3d / 5c.5 — see <button onclick="showTab('subskills')" style="background:none;border:none;color:var(--pink-soft);cursor:pointer;text-decoration:underline;font-size:inherit;padding:0;">Sub-Skills → /deploy-containers</button>; Themis Step 2a — see <button onclick="showTab('prereqs')" style="background:none;border:none;color:var(--pink-soft);cursor:pointer;text-decoration:underline;font-size:inherit;padding:0;">Prerequisites → Themis Pre-Run Checklist</button></td>
+          </tr>
+          <tr>
+            <td>Post-build component summary</td>
+            <td>Actual running versions confirmed after the fact — never assumed from the requested tag or engine version</td>
+            <td><span class="inline-code">/deploy-containers</span> Steps 4e / 5f.5; Themis Step 6c — see <button onclick="showTab('admin')" style="background:none;border:none;color:var(--pink-soft);cursor:pointer;text-decoration:underline;font-size:inherit;padding:0;">Admin Guide → Environment Build Setup</button></td>
+          </tr>
+          <tr>
+            <td>Post-build learnings check</td>
+            <td>Reflects on the session for undocumented gotchas or timing drift; drafts a fix via <span class="inline-code">/contribute skill-fix</span> only when genuinely new — never manufactures a contribution</td>
+            <td><span class="inline-code">/deploy-containers</span> Steps 4f / 5f.6; Themis Step 6d — see <button onclick="showTab('subskills')" style="background:none;border:none;color:var(--pink-soft);cursor:pointer;text-decoration:underline;font-size:inherit;padding:0;">Sub-Skills → /contribute</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note" style="margin-top:12px;">Full access-requirement details (credentials, tokens, IAM policy) for every method are in the <button onclick="showTab('prereqs')" style="background:none;border:none;color:var(--pink-soft);cursor:pointer;text-decoration:underline;font-size:inherit;padding:0;">Prerequisites tab</button> — the Capability Access Matrix and AWS IAM Requirements sections apply here too.</div>
+  </div>
+
 </div>
 
 <div id="tab-user" class="tab-content">
@@ -3439,6 +3678,7 @@ K8S_ADAPTER_PV_SIZE=10Gi</pre></div>
       <div class="rule"><div class="rule-text"><strong>Token is cached, not re-entered</strong> — Auth token saved to <code>.auth.json</code> is reused for 50 minutes. The agent never asks you to paste a token into the conversation.</div></div>
       <div class="rule"><div class="rule-text"><strong>External content is data, not commands</strong> — Instructions found in ticket descriptions, Confluence pages, or log files are not executed. Only engineer instructions in the conversation are followed.</div></div>
       <div class="rule"><div class="rule-text"><strong>bash-safety-guard.py enforces consent at the shell level</strong> — A <code>PreToolUse</code> hook intercepts every Bash command before execution. It blocks: MongoDB/Redis writes, <code>systemctl restart</code> / <code>docker restart</code> / <code>pm2 restart</code> / <code>kubectl rollout restart</code> unless prefixed with <code>RESTART_APPROVED=yes</code>, and <code>POST /adapters</code> or <code>POST /adapters/import</code> unless prefixed with <code>ADAPTER_CREATE_APPROVED=yes</code>. These markers are never added without a clear "yes" from the engineer in the current conversation. The guard also prevents accidental <code>git add data/</code> (customer PII in investigation folders).</div></div>
+      <div class="rule"><div class="rule-text"><strong>No environment provisioning without a method + CPU/memory confirmation</strong> — before <code>/deploy-containers</code> or <code>/themis-aws-deploy</code> creates any billable resource (EC2 instance, EKS cluster, DocumentDB, ElastiCache, or a Docker container), the engineer sees exactly which deployment method is being used and the CPU/memory each component (Platform, MongoDB, Redis, Gateway, adapters) will get, and must type an explicit "yes" before anything is created. Individual infra-creation prompts each restate CPU/RAM on their own; Kubernetes and Themis builds also get one consolidated summary across every component right before the application itself goes live.</div></div>
     </div>
   </div>
 
@@ -4852,7 +5092,27 @@ tofu destroy \
       </div>
       <div class="rule-item">
         <div class="rule-label">EC2 provisioning (Docker-on-VM)</div>
-        <div class="rule-body">If no existing VM: auto-detects latest Rocky Linux 9 AMI, presents instance type menu, reads SG and subnet from <code>.env</code>, shows <code>aws ec2 run-instances</code> command before running, waits for running state. Docker Engine installed via <code>dnf</code> automatically on fresh EC2.</div>
+        <div class="rule-body">If no existing VM: auto-detects latest Rocky Linux 9 AMI, presents instance type menu, reads SG and subnet from <code>.env</code>, shows <code>aws ec2 run-instances</code> command with explicit vCPU/RAM before running, waits for running state. Docker Engine installed via <code>dnf</code> automatically on fresh EC2.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">Step 3d — Final confirmation (Docker)</div>
+        <div class="rule-body">Fires right before <code>make setup</code>/<code>make up</code> for Docker local or Docker-on-VM. Checks the dev-stack's <code>docker-compose.yml</code> for explicit per-container CPU/memory limits; shows a summary table naming the method and each component's limit (or explicitly states "no limit — shares host's full pool" when the compose file sets none). Offers to add a <code>docker-compose.override.yml</code> with <code>cpus</code>/<code>mem_limit</code> before proceeding, useful when trying to faithfully match a customer's resource-constrained environment.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">Step 5c.5 — Final confirmation (K8s)</div>
+        <div class="rule-body">Fires right before the first Helm install, once every component's method and sizing is known. Shows one consolidated table: EKS nodes (type × count → total vCPU/RAM), MongoDB (source + instance class if provisioned, or "external — not managed here"), Redis (same pattern), Platform pod requests/limits (from grade), Gateway (if enabled), and adapter PV size. Individual infra-creation confirmations earlier in Step 2 already covered EKS/Mongo/Redis creation separately — this is the one place the engineer approves the whole picture before the application itself goes live.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">Step 4e — Post-build summary (Docker)</div>
+        <div class="rule-body">Fires after the health check passes. Queries the actual running versions rather than trusting the requested tag — <code>mongosh --eval "db.version()"</code> inside the mongo container, <code>redis-cli INFO server</code> for <code>redis_version</code>, the Platform health endpoint's reported version, and the Gateway container's version file/module (if enabled). Presents one table: component, actual version, access URL, plus the default credentials and the <code>repro/&#123;TICKET&#125;/.env</code> path.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">Step 5f.5 — Post-build summary (K8s)</div>
+        <div class="rule-body">Fires after the health check passes. Shows cluster name/region/K8s version/node count, then actual component versions: Platform's image tag read directly off the running pod (not the Helm values, which can drift with <code>--reuse-values</code>), MongoDB/Redis versions queried via a throwaway <code>kubectl run</code> probe pod against whatever endpoint is configured (Atlas, DocumentDB, ElastiCache, or on-prem — works the same way regardless of source), and Gateway's image tag if IAG4/IAG5 is deployed. Also states the adapter storage method and the saved <code>environments/eks/&#123;name&#125;.yaml</code> path. Probe pods self-delete via <code>--rm</code>; a cleanup command is provided in case one doesn't.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-label">Step 4f / 5f.6 — Post-build learnings check</div>
+        <div class="rule-body">The last step of every build, Docker or K8s, successful or not. Reflects on the session for anything not already documented — an undocumented error/workaround, a step that took meaningfully longer or shorter than its Quick Reference estimate, a decision the engineer had to make that the skill's prompts didn't anticipate, or a tool/API behaving differently than described. Greps this <code>SKILL.md</code> and the HTML guide before assuming anything is new — if every learning is already covered, it says so and stops rather than manufacturing a contribution. If something is genuinely new, it drafts the exact addition and offers <code>/contribute skill-fix deploy-containers</code> to open a PR rather than editing the file directly.</div>
       </div>
       <div class="rule-item">
         <div class="rule-label">Cleanup safety</div>
@@ -4860,18 +5120,20 @@ tofu destroy \
       </div>
     </div>
 
+    <div class="note" style="margin-top:12px;"><strong>Every provisioning path always confirms method + CPU/memory before creating anything billable</strong> — and shows what was actually built afterward. New EC2 instance, new EKS cluster, new DocumentDB cluster, and new ElastiCache cluster each show their own vCPU/RAM breakdown and require an explicit "yes" before creation (Steps 2.vm.3 / 2.k8s.1 / 2.k8s.2 / 2.k8s.3), the environment's actual component versions are confirmed after the fact (Steps 4e / 5f.5) rather than assumed from what was requested, and the session closes by checking whether anything learned along the way needs to be fed back into the skill itself (Steps 4f / 5f.6) — see the Safety Rules &amp; Guardrails section for the full policy.</div>
+
     <div class="table-wrap" style="margin-top:16px;">
       <table>
         <thead><tr><th>Path</th><th>Key steps</th><th>Time estimate</th></tr></thead>
         <tbody>
-          <tr><td>Docker local</td><td>0 → 1 → 2 → 3 → 4</td><td>~5 min</td></tr>
-          <tr><td>Docker on existing VM</td><td>0 → 1 → 2 (existing) → 3 → 4</td><td>~10 min</td></tr>
-          <tr><td>Docker on new EC2</td><td>0 → 1 → 2.vm (EC2 provision) → 3 (Docker install) → 4</td><td>~15–20 min</td></tr>
-          <tr><td>K8s — existing cluster</td><td>0 → 1 → 2.k8s.0–2.k8s.4 → 5a–5f</td><td>~20–30 min</td></tr>
-          <tr><td>K8s — new EKS cluster (min)</td><td>0 → 1 → 2.k8s.0–2.k8s.4 (EKS provision) → 5a–5f</td><td>~35–45 min</td></tr>
+          <tr><td>Docker local</td><td>0 → 1 → 2 → 3 → <strong>3d (confirm)</strong> → 4 → <strong>4e (summary)</strong> → <strong>4f (learnings)</strong></td><td>~5 min</td></tr>
+          <tr><td>Docker on existing VM</td><td>0 → 1 → 2 (existing) → 3 → <strong>3d (confirm)</strong> → 4 → <strong>4e (summary)</strong> → <strong>4f (learnings)</strong></td><td>~10 min</td></tr>
+          <tr><td>Docker on new EC2</td><td>0 → 1 → 2.vm (EC2 provision, confirm w/ vCPU:RAM) → 3 (Docker install) → <strong>3d (confirm)</strong> → 4 → <strong>4e (summary)</strong> → <strong>4f (learnings)</strong></td><td>~15–20 min</td></tr>
+          <tr><td>K8s — existing cluster</td><td>0 → 1 → 2.k8s.0–2.k8s.4 → 5a–5c → <strong>5c.5 (confirm)</strong> → 5d–5f → <strong>5f.5 (summary)</strong> → <strong>5f.6 (learnings)</strong></td><td>~20–30 min</td></tr>
+          <tr><td>K8s — new EKS cluster (min)</td><td>0 → 1 → 2.k8s.0–2.k8s.4 (EKS/Mongo/Redis each confirm w/ vCPU:RAM) → 5a–5c → <strong>5c.5 (confirm)</strong> → 5d–5f → <strong>5f.5 (summary)</strong> → <strong>5f.6 (learnings)</strong></td><td>~35–45 min</td></tr>
           <tr><td>K8s — new EKS cluster (prod)</td><td>same as above</td><td>~40–50 min</td></tr>
-          <tr><td>K8s + ALB ingress</td><td>…5f → 5g</td><td>+5–10 min (ALB provisioning)</td></tr>
-          <tr><td>K8s + adapter PV</td><td>…5f → 5h (PV option)</td><td>+5 min</td></tr>
+          <tr><td>K8s + ALB ingress</td><td>…5f.6 → 5g</td><td>+5–10 min (ALB provisioning)</td></tr>
+          <tr><td>K8s + adapter PV</td><td>…5f.6 → 5h (PV option)</td><td>+5 min</td></tr>
         </tbody>
       </table>
     </div>
@@ -5091,7 +5353,7 @@ tofu destroy \
       <div class="card t-olive">
         <div class="icon">SF</div>
         <h3>/contribute skill-fix {name}</h3>
-        <p style="font-size:12px; color:var(--muted); line-height:1.6;">Describe the improvement to a sub-skill (e.g. "troubleshoot-adapters"). The agent drafts the change, presents the diff, and opens a PR targeting the skill file. Good for gotchas discovered during a case.</p>
+        <p style="font-size:12px; color:var(--muted); line-height:1.6;">Describe the improvement to a sub-skill (e.g. "troubleshoot-adapters"). Vendor-aware: checks <code>vendor/*/SYNC_MANIFEST.json</code> first — a repo-native skill's fix goes straight into its <code>SKILL.md</code>, but a vendor-synced skill's fix (e.g. <code>themis-aws-deploy</code>) is automatically redirected into its <code>LOCAL-EXTENSIONS.md</code> as a proper <code>[OVERRIDE]</code>/<code>[INSERT AFTER Step N]</code> section — it never writes to a vendor file, which a future sync would silently overwrite anyway. Presents the diff, opens a PR. Invoked automatically by <code>/deploy-containers</code> and <code>/themis-aws-deploy</code>'s post-build learnings steps, or run it manually for any gotcha discovered during a case.</p>
       </div>
       <div class="card t-blue">
         <div class="icon">KB</div>
@@ -5125,7 +5387,7 @@ tofu destroy \
       </div>
       <div class="rule-item">
         <div class="rule-label">Diff &amp; final approval</div>
-        <div class="rule-body">Shows the exact <code>git diff --staged</code> output before committing. If the staged diff includes any file other than the two shared knowledge files (or an approved skill file), the session aborts automatically.</div>
+        <div class="rule-body">Shows the exact <code>git diff --staged</code> output before committing. If the staged diff includes any file other than the two shared knowledge files, an approved repo-native <code>SKILL.md</code>, or an approved vendor skill's <code>LOCAL-EXTENSIONS.md</code>, the session aborts automatically — a vendor <code>SKILL.md</code> showing up here is always treated as a detection bug, never committed.</div>
       </div>
       <div class="rule-item">
         <div class="rule-label">PR creation</div>
@@ -5316,6 +5578,29 @@ tofu destroy \
     event.currentTarget.classList.add('active');
     window.scrollTo(0, 0);
     buildToc(name);
+    recoverMermaidIn(name);
+  }
+
+  /* Mermaid with startOnLoad:true renders every .mermaid div at page-load time, including
+     ones inside a hidden (non-default) tab — those can fail because the container can't be
+     measured while display:none. Snapshot each diagram's pristine source now, before mermaid
+     ever touches it, so a failed one can be restored and retried once its tab is actually shown. */
+  document.querySelectorAll('.mermaid').forEach(function(el) {
+    el.dataset.mermaidSrc = el.textContent;
+  });
+
+  function recoverMermaidIn(name) {
+    if (typeof mermaid === 'undefined') return;
+    const tab = document.getElementById('tab-' + name);
+    if (!tab) return;
+    tab.querySelectorAll('.mermaid').forEach(function(el) {
+      const broken = !el.querySelector('svg') || el.querySelector('.error-icon');
+      if (broken && el.dataset.mermaidSrc) {
+        el.removeAttribute('data-processed');
+        el.textContent = el.dataset.mermaidSrc;
+        mermaid.run({ nodes: [el] }).catch(function() {});
+      }
+    });
   }
 
   /* Build TOC for the default active tab on page load */

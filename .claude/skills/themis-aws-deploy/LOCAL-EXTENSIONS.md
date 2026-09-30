@@ -960,12 +960,62 @@ EC2 instances accrue AWS spend until destroyed. Destroy command when done:
 
 ---
 
+### CPU / Memory Allocation Breakdown (per-role)
+
+Before the confirmation prompt, resolve the instance type for each role and count how many
+hosts of that role the chosen `<architecture>` actually creates — never assume a fixed count;
+read it from the tfvars file, since it varies by architecture (`aio`=1 combined host,
+`minimal`=4 dedicated hosts, `ha2`=9, `asa`=up to 18):
+
+```bash
+# Instance types — override via .env, default t3.medium for every role
+PLATFORM_TYPE="${AWS_INSTANCE_TYPE_PLATFORM:-t3.medium}"
+REDIS_TYPE="${AWS_INSTANCE_TYPE_REDIS:-t3.medium}"
+MONGODB_TYPE="${AWS_INSTANCE_TYPE_MONGODB:-t3.medium}"
+GATEWAY_TYPE="${AWS_INSTANCE_TYPE_GATEWAY:-t3.medium}"
+
+# Host count per role — read from the architecture's tfvars, not hardcoded
+grep -E "^(platform|redis|mongodb|gateway)_count" \
+  "<themis_root>/vms/aws/tfvars/<architecture>.tfvars" 2>/dev/null \
+  || echo "Role counts not found in tfvars — inspect <architecture>.tfvars manually before confirming"
+```
+
+```python
+EC2_SPECS = {
+    "t3.medium": (2, 4),  "t3.large": (2, 8),  "t3.xlarge": (4, 16),
+    "m5.xlarge": (4, 16), "m5a.xlarge": (4, 16), "c6a.4xlarge": (16, 32),
+}
+# vcpu, ram_gb = EC2_SPECS.get(ROLE_TYPE, ("?", "?"))
+```
+
+```
+══════════════════════════════════════════════════════════════════════
+  CPU / MEMORY ALLOCATION — <architecture>/<os>
+══════════════════════════════════════════════════════════════════════
+  Role      │ Instance type   │ Hosts │ vCPU/host │ RAM/host │ Role total
+  ──────────┼─────────────────┼───────┼───────────┼──────────┼───────────
+  Platform  │ <PLATFORM_TYPE> │ <N>   │ <vcpu>    │ <ram> GB │ <N×vcpu> / <N×ram> GB
+  MongoDB   │ <MONGODB_TYPE>  │ <N>   │ <vcpu>    │ <ram> GB │ <N×vcpu> / <N×ram> GB
+  Redis     │ <REDIS_TYPE>    │ <N>   │ <vcpu>    │ <ram> GB │ <N×vcpu> / <N×ram> GB
+  Gateway   │ <GATEWAY_TYPE>  │ <N>   │ <vcpu>    │ <ram> GB │ <N×vcpu> / <N×ram> GB
+  ──────────┴─────────────────┴───────┴───────────┴──────────┴───────────
+  TOTAL: <N> VM(s) — <sum of vCPU> vCPU / <sum of RAM> GB
+══════════════════════════════════════════════════════════════════════
+```
+
+If any `AWS_INSTANCE_TYPE_*` override is unset in `.env`, the row shows `t3.medium (default —
+not explicitly set)` so the engineer notices before confirming, rather than silently
+assuming they chose it.
+
+---
+
 ### Confirmation Prompt (Hard Stop)
 
 Present this and **wait for engineer input** before executing any Step 3 command:
 
 ```
-All checks passed. Ready to provision <N> VM(s) for <architecture>/<os> on <aws_profile>.
+All checks passed. Ready to provision <N> VM(s) for <architecture>/<os> on <aws_profile>
+(see CPU/Memory Allocation Breakdown above — <sum of vCPU> vCPU / <sum of RAM> GB total).
 
 Proceed with tofu apply? (yes / no / show-run-vars)
 ```
@@ -976,3 +1026,148 @@ Proceed with tofu apply? (yes / no / show-run-vars)
 
 **No other response proceeds.** Claude does not infer "yes" from silence, prior messages,
 or `--auto` flags. The engineer must type "yes" in the chat in response to this prompt.
+This confirmation is never skipped — it fires identically whether the skill was invoked
+directly or wrapped by `/deploy-containers` picking the "VMs on AWS (Themis)" option.
+
+---
+
+## [INSERT AFTER Step 6b] Step 6c — Post-Build Component Summary Table
+
+> **Run this after Step 6b (Capture Certify Reports), replacing/extending the vendor's
+> plain-text "End-of-run summary."** The vendor summary already states PASSED/FAILED per
+> component and report file locations — this step adds a structured table naming every
+> component's actual version and host, so the engineer never has to open a report file
+> just to answer "what did we actually build?"
+
+### Resolve requested versions from run-vars.yml
+
+```bash
+PLATFORM_RELEASE=$(grep -E "^platform_release:" .claude/skills/themis-aws-deploy/run-vars.yml \
+  | awk -F': ' '{print $2}' | tr -d '"' | xargs)
+GATEWAY_RELEASE=$(grep -E "^gateway_release:" .claude/skills/themis-aws-deploy/run-vars.yml \
+  | awk -F': ' '{print $2}' | tr -d '"' | xargs)
+[ -z "${PLATFORM_RELEASE}" ] && PLATFORM_RELEASE="Themis pinned default (not overridden in run-vars.yml)"
+[ -z "${GATEWAY_RELEASE}" ] && GATEWAY_RELEASE="not deployed (gateway_release unset)"
+```
+
+### Extract actual MongoDB version from certify reports
+
+```bash
+for f in <ENV_DIR>/reports/mongodb/*.md; do
+  [ -f "$f" ] || continue
+  host=$(basename "$f" | sed -E 's/mongodb-report-(.+)\.md/\1/')
+  ver=$(grep -m1 "^db version" "$f" | awk '{print $3}')
+  echo "MongoDB @ ${host}: ${ver:-unknown — inspect $f manually}"
+done
+```
+
+### Extract actual Redis version from certify reports (if the architecture has a Redis role)
+
+```bash
+for f in <ENV_DIR>/reports/redis/*.md; do
+  [ -f "$f" ] || continue
+  host=$(basename "$f" | sed -E 's/redis-report-(.+)\.md/\1/')
+  ver=$(grep -m1 -iE "redis[ _-]?version" "$f" | head -1)
+  echo "Redis @ ${host}: ${ver:-unknown — inspect $f manually, report format not yet confirmed for this field}"
+done
+```
+
+**Note:** unlike the MongoDB report's confirmed `db version vX.Y.Z` line, the exact Redis
+version line format has not been verified against a live redis-report — grep broadly
+(`-iE "redis[ _-]?version"`) and fall back to telling the engineer to open the report
+directly rather than asserting a version that might be a false match.
+
+### Resolve per-role host list from the inventory
+
+```bash
+cat <ENV_DIR>/inventory/hosts
+# Groups: [platform], [mongodb], [redis], [gateway] — extract hostname/IP per group
+```
+
+### Present the summary table
+
+```
+╔══════════════════════════════════════════════════════════════════════════╗
+║  ENVIRONMENT BUILD SUMMARY — <architecture>/<os>                        ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║  AWS account:  <account-id>   Region: <region>   Owner: <owner>          ║
+║  Built:        <timestamp>                                              ║
+╠═══════════╦═══════════════════════╦═══════════════════════╦══════════════╣
+║ Role      ║ Host(s)               ║ Version               ║ Instance type║
+╠═══════════╬═══════════════════════╬═══════════════════════╬══════════════╣
+║ Platform  ║ <host1>, <host2>...   ║ <PLATFORM_RELEASE>    ║ <PLATFORM_TYPE>║
+║ MongoDB   ║ <host1>, <host2>...   ║ <extracted per host>  ║ <MONGODB_TYPE>║
+║ Redis     ║ <host1>, <host2>...   ║ <extracted per host>  ║ <REDIS_TYPE>║
+║ Gateway   ║ <host>                ║ <GATEWAY_RELEASE>     ║ <GATEWAY_TYPE>║
+╠═══════════╩═══════════════════════╩═══════════════════════╩══════════════╣
+║ Certify verdict:  <PASSED/FAILED/WARNING per component from Step 6a>     ║
+║ Reports:          <ENV_DIR>/reports/  (snapshot: <SKILL_DIR>/artifacts/...)║
+║ Destroy command:  tofu destroy -var-file=... -var owner=<owner> ...      ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+This table supplements — does not replace — the vendor's own "End-of-run summary" bullet
+list (deployment state, certify verdict, report locations). Present both.
+
+---
+
+## [INSERT AFTER Step 6c] Step 6d — Post-Build Learnings & Documentation Check
+
+**Run this after every build, successful or not.** `/deploy-containers` runs the same check
+(its Step 4f/5f.6) — this is the Themis equivalent, adapted for the fact that any fix here
+must land in this file, never in the vendor `SKILL.md`.
+
+**Reflect on the session:**
+
+1. Did any Ansible task, `tofu` command, or preflight check in Steps 0–6c fail in a way not
+   already covered by an existing gotcha in this file or `references/troubleshooting.md`,
+   requiring an improvised fix?
+2. Did provisioning, the deployer run, or certify take meaningfully longer/shorter than the
+   Section 9 runtime table's estimate for this architecture?
+3. Did the engineer have to supply information or make a call the Pre-Build Confirmation Gate
+   (Step 2a) didn't anticipate — an unusual VPC/subnet setup, a missing IAM permission, a
+   `run-vars.yml` field whose accepted values weren't clear from its comment?
+4. Did `eksctl`, `tofu`, `ansible-playbook`, or an AWS API behave differently than documented —
+   a renamed/removed flag, a different default, a stricter or looser version requirement?
+5. Did the actual versions from Step 6c's summary table reveal anything worth noting — e.g. the
+   Themis pinned default resolving to an unexpected MongoDB version?
+
+**Check whether each "yes" is already documented** — search this file and the HTML guide,
+not just memory of what "should" be documented:
+
+```bash
+grep -n -i "{keyword from the learning}" .claude/skills/themis-aws-deploy/LOCAL-EXTENSIONS.md
+grep -n -i "{keyword}" .claude/skills/themis-aws-deploy/references/troubleshooting.md
+grep -n -i "{keyword}" docs/troubleshooting-agent-guide.html
+```
+
+**If every "yes" is already covered:** say so and stop — do not manufacture a contribution.
+
+**If genuinely new, draft the addition** as a proper `[OVERRIDE]` or `[INSERT AFTER Step N]`
+section (never a raw note appended to the end — it needs to anchor to the vendor step it
+relates to, same as every other section in this file) and present it:
+
+```
+══════════════════════════════════════════════════════════════
+  POST-BUILD LEARNINGS — this session (Themis / <architecture>)
+══════════════════════════════════════════════════════════════
+  {learning}: NEW — not currently documented
+  {learning}: already documented in {file}:{line} — no action
+
+  Proposed addition to .claude/skills/themis-aws-deploy/LOCAL-EXTENSIONS.md:
+  ─────────────────────────────────────────────────────────
+  ## [INSERT AFTER Step {N}] Step {N}a — {short title}
+  {drafted content — structural instructions only, no plaintext AWS/env/account
+   config per the Vendor Skill Extension Policy}
+  ─────────────────────────────────────────────────────────
+
+Contribute this update? [yes → runs /contribute skill-fix themis-aws-deploy
+                          / edit / skip]
+══════════════════════════════════════════════════════════════
+```
+
+**On "yes":** invoke `/contribute skill-fix themis-aws-deploy "{one-line description}"`.
+`/contribute` detects that `themis-aws-deploy` is vendor-synced (via
+`vendor/platform-skills/SYNC_MANIFEST.json`) and automatically targets
+`LOCAL-EXTENSIONS.md` instead of the vendor `SKILL.md` — never write this fix directly
+outside that flow.

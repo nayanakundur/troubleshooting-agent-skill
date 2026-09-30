@@ -1,22 +1,47 @@
 # Kubernetes Prerequisites
 
-## macOS as Control Plane
+## Two Supported Cluster Types: EKS or Local `kind`
 
-Running `/deploy-containers k8s` from macOS is fully supported. All EKS worker nodes run in AWS —
-the Mac is only the operator machine, so local RAM and CPU are not a bottleneck.
+`/deploy-containers k8s` supports both an AWS EKS cluster and a pre-existing local `kind` cluster
+(`kubectl config current-context` showing `kind-<name>`) — the skill detects which one is active
+and the rest of the flow (Helm installs, secrets, health probes) applies identically. Only image-pull
+mechanics differ between the two (see the arm64 gotcha below).
+
+**Running `/deploy-containers k8s` against EKS from macOS is fully supported** — all EKS worker
+nodes run in AWS, so the Mac is only the operator machine and local RAM/CPU are not a bottleneck.
+**Running against local `kind`** puts every workload on the Mac itself — size `kind`'s Docker
+Desktop resource allocation accordingly (minimum grade: 4 vCPU / 16 GB, matching the docs.itential.com
+EKS node minimum, since IAP's own resource needs don't change based on where the cluster runs).
+
+> **Gotcha — Apple Silicon (arm64) `kind` nodes cannot pull amd64-only images the normal way.**
+> Unlike `docker run`, which transparently emulates amd64 via QEMU, containerd inside a `kind` node
+> performs strict CRI platform matching and will fail (or silently pick the wrong manifest) when
+> pulling an amd64-only image — this affects the IAG5 image (`automation-gateway5:*-amd64`) in
+> particular. **Fix:** pull the image on the host first (where Docker Desktop's emulation works),
+> then side-load it directly into the `kind` node's containerd, bypassing the platform-matched
+> registry pull:
+> ```bash
+> docker pull --platform linux/amd64 <image>:<tag>
+> kind load docker-image <image>:<tag> --name <kind-cluster-name>
+> ```
+> This is specific to `kind` on Apple Silicon — EKS worker nodes (always the platform the image was
+> built for) never hit this.
 
 **Required tools (install once via Homebrew):**
 
 ```bash
-brew install awscli          # AWS CLI v2 — ECR auth, EKS cluster ops, ElastiCache provisioning
-brew install eksctl           # eksctl ≥ 0.190 — cluster provisioning and IRSA role creation
-brew install kubectl          # kubectl — cluster management, Helm lifecycle
-brew install helm             # Helm 3.15+ — IAP/IAG chart installs
+brew install awscli          # AWS CLI v2 — ECR auth, EKS cluster ops, ElastiCache provisioning (EKS path only)
+brew install eksctl           # eksctl ≥ 0.190 — cluster provisioning and IRSA role creation (EKS path only)
+brew install kubectl          # kubectl — cluster management, Helm lifecycle (both paths)
+brew install helm             # Helm 3.15+ — IAP/IAG chart installs (both paths)
+brew install kind             # kind — only if building a local cluster instead of EKS
 ```
 
-Docker Desktop or OrbStack must be running for `docker login` (ECR token step). It does not run any Itential workloads locally.
+Docker Desktop or OrbStack must be running — for the EKS path just for `docker login` (ECR token
+step); for the local `kind` path, Docker Desktop also runs every cluster node and workload, so its
+configured resource allocation (Settings → Resources) is the effective ceiling for the whole cluster.
 
-**AWS credentials:** configure via `aws configure sso` (recommended) or a static IAM key. The engineer selects the profile in Step 1 of the skill.
+**AWS credentials:** configure via `aws configure sso` (recommended) or a static IAM key. The engineer selects the profile in Step 1 of the skill. Not needed for the local `kind` path beyond ECR pull auth.
 
 ---
 
@@ -28,10 +53,31 @@ Docker Desktop or OrbStack must be running for `docker login` (ECR token step). 
 | Helm | 3.15.0 | Check: `helm version --short` |
 | Node CPU | 4 cores per node | IAP StatefulSet (2 replicas) |
 | Node RAM | 16 GB per node | |
-| StorageClass | `iap-ebs-gp3` (EBS gp3) | Created by skill if absent |
-| cert-manager | Any recent | For TLS — optional but recommended |
+| StorageClass | `iap-ebs-gp3` (EBS gp3) | Created by skill if absent; on `kind`, the provisioner differs — see the StorageClass section below |
+| cert-manager | Any recent | **Required — not optional.** Must be installed cluster-wide, never as a per-chart subchart dependency (see gotcha below) |
 | External MongoDB | Required | IAP Helm chart does NOT bundle MongoDB |
 | External Redis | Required | IAP Helm chart does NOT bundle Redis |
+
+> **Gotcha — install cert-manager cluster-wide, never as a per-chart subchart dependency.**
+> Setting `certManager.enabled: true` inside the `iap`/`iag5` Helm values causes a chicken-and-egg
+> problem: the chart's `--dry-run` (and often the real install) needs cert-manager's CRDs (`Issuer`,
+> `ClusterIssuer`, `Certificate`) to already exist. Install cert-manager once, cluster-wide, before
+> any Itential Helm install:
+> ```bash
+> kubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml
+> kubectl wait --for=condition=Available deployment --all -n cert-manager --timeout=120s
+> ```
+> then set `certManager.enabled: false` in every chart's values file — the chart still creates its
+> own `Issuer`/`Certificate` objects, it just doesn't try to install the controller itself.
+>
+> **Related gotcha — `ClusterIssuer` vs namespaced `Issuer` resolve their CA secret in different
+> namespaces.** A `ClusterIssuer`'s `ca.secretName` is looked up in the **cert-manager controller's
+> own namespace** (`cert-manager`), regardless of which namespace the issuer "belongs" to. A
+> namespaced `Issuer`'s `ca.secretName` is looked up in its own namespace. The `iap` chart defaults
+> `issuer.kind: ClusterIssuer`; the `iag5` chart defaults `issuer.kind: Issuer`. If both charts share
+> one CA secret, that secret must exist in **both** the app namespace (for the `Issuer`) **and** the
+> `cert-manager` namespace (for the `ClusterIssuer`) — copy it explicitly rather than assuming one
+> secret is enough.
 
 ## Required Tools (Local Machine)
 
@@ -126,7 +172,7 @@ kubectl get pods -n kube-system | grep ebs-csi
 aws eks create-addon --cluster-name <cluster> --addon-name aws-ebs-csi-driver
 ```
 
-For non-EKS clusters, change the `provisioner` in the StorageClass manifest to match your CSI driver.
+For local `kind` clusters, use `provisioner: rancher.io/local-path` (kind's built-in default CSI) instead of `ebs.csi.aws.com` — the skill's default manifest targets EKS's EBS CSI driver and needs this one field changed for `kind`. For any other non-EKS cluster, change the `provisioner` to match your CSI driver.
 
 ## K8s Secrets Required
 
@@ -160,6 +206,28 @@ Created by the skill in Step 5a. Referenced by `imagePullSecrets` in each Helm c
 | IAG5 | `https://itential.github.io/iag5-helm` | `iag5/iag5` |
 | IAG4 | `https://itential.github.io/iag4-helm` | `iag4/iag4` |
 
+> **Gotcha — check for a stale `pending-install` release before the first Helm install of a
+> session.** `helm upgrade --install --atomic --timeout` only rolls back/uninstalls on failure if
+> the controlling Helm client process is still alive to observe the timeout. If a prior session
+> was killed (terminal closed, agent context reset) mid-install, the release is left stuck in
+> `pending-install` indefinitely — a fresh `helm upgrade --install` against it errors or produces
+> confusing partial-state behavior. Check first, especially on a cluster that's been used before:
+> ```bash
+> helm list -n itential --pending
+> # If found: helm uninstall <release> -n itential   (safe — nothing succeeded)
+> ```
+
+> **Gotcha — never author a Helm values file from memory.** Helm silently drops unknown keys in
+> `--values` files: it does not error, does not warn, and the release still installs "successfully"
+> while the intended override has zero effect. Always confirm the chart's real schema first:
+> ```bash
+> helm show values iap/iap > /tmp/iap-default-values.yaml
+> helm pull iap/iap --untar --untardir /tmp/iap-chart-inspect
+> grep -rn '\.Values\.' /tmp/iap-chart-inspect/iap/templates/ | less
+> ```
+> The real `iap` chart schema uses `storageClass: {enabled, name}` (not `persistence.storageClassName`)
+> and a flat `env:` map for Mongo/Redis connection settings (not nested `mongodb:`/`redis:` blocks).
+
 ## IAG4 Node Requirements
 
 IAG4 requires dedicated nodes with a label and taint:
@@ -183,7 +251,13 @@ IAG4 also creates two PVCs per instance:
 | Simple | Single-node, reproduction environments |
 | Distributed | HA, multiple IAG5 replicas with shared etcd |
 
-The IAG5 chart bundles an etcd subchart (bitnami 11.3.0). No external etcd needed.
+The IAG5 chart bundles an etcd subchart (bitnami 11.3.0), but it does not activate itself
+correctly by default — bare `--set` flags for image/pull-secret alone are not sufficient. For
+**Simple mode** (the reproduction default), explicitly set `etcd.enabled: false` in the values
+file; only set it `true` when actually running Distributed mode with a provisioned etcd cluster.
+The chart also needs `certManager.enabled: false` (cluster-wide cert-manager handles TLS — see the
+cert-manager gotcha above) and a namespaced `Issuer` + `Certificate` block, since the `iag5` chart
+defaults `issuer.kind: Issuer`, not `ClusterIssuer` like the `iap` chart.
 
 ## Accessing the Deployed Platform
 

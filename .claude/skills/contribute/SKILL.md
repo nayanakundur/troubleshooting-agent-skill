@@ -147,12 +147,62 @@ Version note details:
 
 ### If argument is `skill-fix {skill-name} "description"`
 
-Identify the skill file:
+**First, determine whether this skill is vendor-synced — writing to a vendor SKILL.md is never allowed, regardless of how small the fix looks.**
+
 ```bash
-ls .claude/skills/{SKILL_NAME}/SKILL.md
+SKILL_PATH=".claude/skills/${SKILL_NAME}/SKILL.md"
+IS_VENDOR=false
+
+# Check both vendor manifests — key name differs between them
+if [ -f vendor/platform-skills/SYNC_MANIFEST.json ]; then
+    python3 -c "
+import json, sys
+d = json.load(open('vendor/platform-skills/SYNC_MANIFEST.json'))
+target = '/${SKILL_PATH}'
+sys.exit(0 if any(f == target or f.lstrip('/') == '${SKILL_PATH}' for f in d.get('skill_files', [])) else 1)
+" && IS_VENDOR=true
+fi
+
+if [ "${IS_VENDOR}" = "false" ] && [ -f vendor/builder-skills/SYNC_MANIFEST.json ]; then
+    python3 -c "
+import json, sys
+d = json.load(open('vendor/builder-skills/SYNC_MANIFEST.json'))
+target = '/${SKILL_PATH}'
+sys.exit(0 if any(f == target or f.lstrip('/') == '${SKILL_PATH}' for f in d.get('files', [])) else 1)
+" && IS_VENDOR=true
+fi
+
+if [ "${IS_VENDOR}" = "true" ]; then
+    echo "⚠️  ${SKILL_NAME} is vendor-synced — the fix goes into LOCAL-EXTENSIONS.md, never SKILL.md"
+    TARGET_FILE=".claude/skills/${SKILL_NAME}/LOCAL-EXTENSIONS.md"
+else
+    echo "✅ ${SKILL_NAME} is repo-native — the fix goes directly into SKILL.md"
+    TARGET_FILE="${SKILL_PATH}"
+fi
+```
+
+**If `IS_VENDOR=true` and `LOCAL-EXTENSIONS.md` does not yet exist**, create it from the canonical header (see `.claude/skills/themis-aws-deploy/LOCAL-EXTENSIONS.md` lines 1–11 for the exact wording) before drafting the fix, and remind the engineer to add the CLAUDE.md pointer note (`> **`/{skill-name}` local extensions:** ...`) in the platform-skills section of `CLAUDE.md` if one doesn't already exist — without it, future sessions won't know to read the extension file alongside the vendor SKILL.md.
+
+Identify the current relevant section (in `SKILL.md` for repo-native skills, or the closest anchor point in the vendor `SKILL.md` for vendor skills — an extension still needs to know which vendor step it attaches to via `[OVERRIDE]` or `[INSERT AFTER Step N]`):
+```bash
+cat "${TARGET_FILE}" 2>/dev/null || echo "(LOCAL-EXTENSIONS.md does not exist yet — will be created)"
 ```
 
 Prompt the engineer for the specific change needed. Present the current relevant section, then draft the fix for approval before writing.
+
+**For a vendor skill, format the draft as a proper extension section**, not a raw diff of vendor content:
+```markdown
+## [INSERT AFTER Step N] Step Na — {short title}
+
+{the actual fix content, structural instructions only — no plaintext AWS/env/account config
+per the Vendor Skill Extension Policy}
+```
+or
+```markdown
+## [OVERRIDE] {Section Name}
+
+{replacement instruction}
+```
 
 ### If argument is `known-bug ENG-XXXX`
 
@@ -339,7 +389,7 @@ git checkout -b "${BRANCH}" 2>/dev/null \
 echo "Working on branch: $(git branch --show-current)"
 ```
 
-Write approved content to the target file(s). For `known-resolutions.md`, append after the last `---` separator. For `product-capability-reference.md`, insert into the correct section (§5 or §7 table).
+Write approved content to the target file(s). For `known-resolutions.md`, append after the last `---` separator. For `product-capability-reference.md`, insert into the correct section (§5 or §7 table). For `skill-fix`, write to `${TARGET_FILE}` resolved in Phase 1 — `SKILL.md` directly for a repo-native skill, or append the extension section to `LOCAL-EXTENSIONS.md` for a vendor skill (creating the file with its canonical header first if it doesn't exist). **Never write a skill-fix to a vendor SKILL.md — if `IS_VENDOR=true` and `TARGET_FILE` still resolves to `SKILL.md`, stop and re-check Phase 1's detection before writing anything.**
 
 ```python
 # Append to known-resolutions.md
@@ -356,8 +406,10 @@ print('✅ Appended to data/known-resolutions.md')
 # Stage ONLY the shared knowledge files
 git add data/known-resolutions.md
 git add data/product-capability-reference.md
-# For skill-fix contributions:
-# git add .claude/skills/{SKILL_NAME}/SKILL.md
+# For skill-fix contributions — stage exactly ${TARGET_FILE} from Phase 1, never both:
+#   repo-native skill: git add .claude/skills/{SKILL_NAME}/SKILL.md
+#   vendor skill:      git add .claude/skills/{SKILL_NAME}/LOCAL-EXTENSIONS.md
+git add "${TARGET_FILE}" 2>/dev/null
 
 # Verify nothing else was staged
 git status --short
@@ -376,7 +428,7 @@ Present the diff to the engineer:
   Confirm commit and push? [yes / abort]
 ```
 
-If the diff shows anything other than `data/known-resolutions.md`, `data/product-capability-reference.md`, or an approved `SKILL.md` file → **abort immediately** and warn the engineer.
+If the diff shows anything other than `data/known-resolutions.md`, `data/product-capability-reference.md`, an approved repo-native `SKILL.md` file, or an approved vendor skill's `LOCAL-EXTENSIONS.md` → **abort immediately** and warn the engineer. A vendor skill's `SKILL.md` appearing in this diff is always a bug in Phase 1's detection — never commit it.
 
 ---
 

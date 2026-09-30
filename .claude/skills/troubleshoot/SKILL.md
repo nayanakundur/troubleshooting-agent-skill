@@ -543,13 +543,30 @@ Using the authenticated session from Step 3a, attempt to trigger the confirmed r
 
 **If the engineer wants an isolated local reproduction environment**: proceed to Step 3b.0 to select the deployment type, then Step 3b.1 to scaffold the environment.
 
+**Reproduction Environment Decision Guidance — use this to open Step 3b with a stated recommendation instead of asking cold.**
+
+*Layer 1 — customer's live environment vs. an isolated build:*
+- **Prefer the customer's live environment** when confirming the root cause is purely read-only — API calls, log inspection, config/settings comparison — and needs no writes. This is the common case and needs no environment build at all.
+- **Prefer an isolated environment** when reproduction requires side-effecting actions that shouldn't be risked on the customer's system — restarts, settings changes, adapter install/creation, triggering a workflow that writes data — or when the Constructive Fix Path will iterate on a builder-skill fix multiple times before applying it live.
+
+*Layer 2 — which isolated method, if Layer 1 says isolated (feeds Step 3b.0's recommendation):*
+- **Docker local** (default) — generic application-level bugs: workflow/adapter/JST/API/UI logic not tied to OS or orchestration behavior. Fastest, ~5 min.
+- **Docker on VM** — same as Docker local, but network isolation from the engineer's own machine is needed (something must be reachable from elsewhere, or the local machine can't run Docker).
+- **Kubernetes/EKS** — the confirmed root cause is Kubernetes/Helm-specific (pod scheduling, StorageClass, ingress, chart values schema), the customer's actual deployment is K8s-based and orchestration fidelity matters, or it's an OSS Helm chart bug (`/troubleshoot-oss` territory).
+- **Themis (full VM topology)** — root cause requires OS-level fidelity: systemd/init scripts, RPM install/upgrade paths, MongoDB replica-set or Redis Sentinel HA behavior, multi-host network topology, or matching the customer's exact architecture (aio/minimal/ha2/asa).
+
+See the guide's **Environments** tab for the full comparison matrix and decision tree.
+
 ---
 
 ### Step 3b.0 — Select Reproduction Deployment Type (when isolated env needed)
 
-Before scaffolding, ask the engineer how they want to build the reproduction environment:
+**Lead with the Layer 2 recommendation from the guidance above** — state it, then show the menu for override; never silently pick without letting the engineer confirm or redirect:
 
 ```
+{Recommendation, e.g.: "This looks like a Helm chart StorageClass issue — I'd suggest
+Kubernetes. Proceed with that, or pick a different method?"}
+
 How would you like to build the reproduction environment?
 
   1) Docker local   — this machine (fastest, dev/test only)
@@ -557,12 +574,12 @@ How would you like to build the reproduction environment?
   3) Kubernetes     — Helm charts on an existing cluster
   4) VMs on AWS     — Themis (/themis-aws-deploy)
 
-Choice [1-4] (default: 1 — Docker local):
+Choice [1-4] (default: 1 — Docker local, or the recommended option above if stated):
 ```
 
 - **Options 1-3:** invoke `/deploy-containers` skill. It handles ECR auth, dev stack setup, and creates `repro/{ISD_TICKET_KEY}/.env` automatically. Return here after `/deploy-containers` completes.
 - **Option 4:** invoke `/themis-aws-deploy` skill instead. Return here after the environment is up.
-- **If engineer has no preference or says "just docker":** default to option 1 (Docker local) without prompting further.
+- **If engineer has no preference or says "just docker":** default to option 1 (Docker local) without prompting further — the recommendation only applies when a specific signal from Layer 2 points elsewhere.
 
 ---
 
